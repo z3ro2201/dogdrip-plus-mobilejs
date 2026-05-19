@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         개드립 Plus+ 크롬 & 사파리 전천후 마스터 통합본
+// @name         개드립 Plus+
 // @namespace    https://dogdrip.net/
-// @version      2.0.1
+// @version      2.0.2
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
@@ -556,12 +556,7 @@
 
           const htmlEl = document.documentElement;
           if (htmlEl) {
-            // 🛡️ [오타 보정 완료]: 지연을 발생시키던 trim 구문에 () 배치 완료
-            if (
-              result.contentWidth &&
-              typeof result.contentWidth.trim === "function" &&
-              result.contentWidth.trim() !== ""
-            ) {
+            if (result.contentWidth && result.contentWidth.trim() !== "") {
               htmlEl.style.setProperty(
                 "--ext-custom-width",
                 result.contentWidth.trim(),
@@ -839,7 +834,6 @@
                 row.remove();
               }
             } else if (currentMemberId && memos[currentMemberId]) {
-              // 🛡️ [참조 오류 해결]: memos[result.userMemos] 격파 완비
               if (
                 authorElement &&
                 !row.querySelector(`.ext-badge-id-${currentMemberId}`)
@@ -1136,7 +1130,7 @@
     });
   }
 
-  // 🛡️ [🔎 함수 선언부 생환 완료]: 실종되어 ReferenceError의 만악의 근원이었던 핵심 관제소 복직 완료!
+  // 🛡️ [4단계: 순정 팝업 메뉴 감지 및 인터셉트 엔진]
   function handlePopupMenuDetected(popupElement) {
     const currentDisplay = window.getComputedStyle(popupElement).display;
     if (currentDisplay === "none") return;
@@ -1192,15 +1186,15 @@
     const blockItem = document.createElement("li");
     blockItem.className = "ext-inserted-member-block";
     if (isAlreadyBlocked) {
-      blockItem.innerHTML = `<a href="#" style="color: #${grantColor}; font-weight: bold;">차단 해제</a>`;
+      blockItem.innerHTML = `<a href="#" style="color: #16a34a; font-weight: bold;">차단 해제</a>`;
     } else {
-      blockItem.innerHTML = `<a href="#" style="color: #${blockColor}; font-weight: bold;">차단</a>`;
+      blockItem.innerHTML = `<a href="#" style="color: #f43f5e; font-weight: bold;">차단</a>`;
     }
     popupMenuEl.appendChild(memoLi);
     popupMenuEl.appendChild(blockItem);
   }
 
-  // 🛡️ [위임 연동 가드]: 닉네임 박스 서브 메뉴 연동
+  // 🛡️ 드롭다운 항목 위임 가로채기 파이프라인
   document.body.addEventListener("click", (e) => {
     const item = e.target.closest("a");
     if (!item) return;
