@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.0.0
+// @version      1.0.1
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -9,6 +9,9 @@
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_listValues
+// @grant        GM.getValue
+// @grant        GM.setValue
+// @grant        GM.deleteValue
 // @run-at       document-start
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
@@ -18,33 +21,78 @@
   "use strict";
 
   /* =========================================================================
-   * 1. 스토리지 래퍼 (GM_getValue / GM_setValue → chrome.storage 대체)
+   * 1. 스토리지 래퍼
+   *    우선순위: GM_getValue (동기, Tampermonkey)
+   *             → GM.getValue  (Promise, Userscripts iOS)
+   *             → localStorage (최후 폴백)
    * ========================================================================= */
+  const LS_PREFIX = "ddplus_";
+
+  const _backend = (() => {
+    // ── Tampermonkey / Violentmonkey 계열 (동기 GM_*)
+    if (typeof GM_getValue === "function") {
+      return {
+        async get(key) {
+          const r = GM_getValue(key, null);
+          return r !== null ? JSON.parse(r) : undefined;
+        },
+        async set(key, val) {
+          GM_setValue(key, JSON.stringify(val));
+        },
+        async remove(key) {
+          GM_deleteValue(key);
+        },
+      };
+    }
+    // ── Userscripts iOS / 일부 확장 (Promise GM.*)
+    if (typeof GM !== "undefined" && typeof GM.getValue === "function") {
+      return {
+        async get(key) {
+          const r = await GM.getValue(key, null);
+          return r !== null ? JSON.parse(r) : undefined;
+        },
+        async set(key, val) {
+          await GM.setValue(key, JSON.stringify(val));
+        },
+        async remove(key) {
+          await GM.deleteValue(key);
+        },
+      };
+    }
+    // ── 최후 폴백: localStorage (기기/앱 재설치 시 유실 주의)
+    console.warn("[개드립Plus] GM API 없음 → localStorage 폴백 사용");
+    return {
+      async get(key) {
+        const r = localStorage.getItem(LS_PREFIX + key);
+        return r !== null ? JSON.parse(r) : undefined;
+      },
+      async set(key, val) {
+        localStorage.setItem(LS_PREFIX + key, JSON.stringify(val));
+      },
+      async remove(key) {
+        localStorage.removeItem(LS_PREFIX + key);
+      },
+    };
+  })();
+
   const Store = {
-    get(keys) {
-      return new Promise((resolve) => {
-        const result = {};
-        const list = Array.isArray(keys) ? keys : [keys];
-        list.forEach((k) => {
-          const raw = GM_getValue(k, null);
-          result[k] = raw !== null ? JSON.parse(raw) : undefined;
-        });
-        resolve(result);
-      });
+    async get(keys) {
+      const list = Array.isArray(keys) ? keys : [keys];
+      const result = {};
+      await Promise.all(
+        list.map(async (k) => {
+          result[k] = await _backend.get(k);
+        }),
+      );
+      return result;
     },
-    set(obj) {
-      return new Promise((resolve) => {
-        Object.entries(obj).forEach(([k, v]) => {
-          GM_setValue(k, JSON.stringify(v));
-        });
-        resolve();
-      });
+    async set(obj) {
+      await Promise.all(
+        Object.entries(obj).map(([k, v]) => _backend.set(k, v)),
+      );
     },
-    remove(key) {
-      return new Promise((resolve) => {
-        GM_deleteValue(key);
-        resolve();
-      });
+    async remove(key) {
+      await _backend.remove(key);
     },
   };
 
@@ -399,8 +447,14 @@
           <button class="ext-backup-btn" id="s-restore-btn">⬆️ 백업 복구</button>
         </div>
         <input type="file" id="s-restore-file" accept=".json" style="display:none;" />
+        <p class="ext-section-label" style="margin-top:18px;">Dogdrip++ 백업 이식</p>
+        <div class="ext-backup-row">
+          <button class="ext-backup-btn" id="s-restore-pp-btn" style="border-color:#f59e0b;color:#b45309;">📥 Dogdrip++ 백업 가져오기</button>
+        </div>
+        <input type="file" id="s-restore-pp-file" accept=".json" style="display:none;" />
         <p style="margin-top:16px;font-size:12px;color:#94a3b8; line-height:1.7;">
-          백업 파일은 JSON 형식으로 저장되며, 동일 브라우저·동일 유저스크립트 환경에서 복구 가능합니다.<br>
+          백업 파일은 JSON 형식으로 저장되며, 동일 유저스크립트 환경에서 복구 가능합니다.<br>
+          Dogdrip++ 이식 시 차단 유저·키워드만 가져오며, 나머지 현재 설정은 유지됩니다.<br>
           ※ 설정 변경 후 페이지 새로고침 시 반영됩니다.
         </p>
       </div>
@@ -1120,6 +1174,11 @@
       if (m) {
         lastClickedUserData.memberId = m[1];
         lastClickedUserData.nickname = uLink.textContent.trim();
+        // 팝업이 이미 열려있을 수 있으므로 즉시 시도
+        const area = document.getElementById("popup_menu_area");
+        if (area && window.getComputedStyle(area).display !== "none") {
+          handlePopupMenu(area);
+        }
       }
     }
   });
@@ -1176,8 +1235,22 @@
   }
 
   function handlePopupMenu(el) {
-    if (window.getComputedStyle(el).display === "none") return;
-    if (!lastClickedUserData.memberId) return;
+    const cs = window.getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden") return;
+    if (!lastClickedUserData.memberId) {
+      // member_ 링크를 직접 탐색해서 fallback
+      const lastLink =
+        el.querySelector('a[class*="member_"]') ||
+        document.querySelector('a[class*="member_"]:focus');
+      if (lastLink) {
+        const m = lastLink.className.match(/member_(\d+)/);
+        if (m) {
+          lastClickedUserData.memberId = m[1];
+          lastClickedUserData.nickname = lastLink.textContent.trim();
+        }
+      }
+      if (!lastClickedUserData.memberId) return;
+    }
     Store.get(["blocked_users", "userMemos"]).then((r) => {
       const list = r.blocked_users || [];
       const memos = r.userMemos || {};
@@ -1346,27 +1419,6 @@
       });
     });
 
-    // 표시 설정 토글
-    const toggleMap = [
-      ["s-hide-notice", "hideNotice"],
-      ["s-hide-popular", "hidePopular"],
-      ["s-hide-sidebar", "hideSidebar"],
-      ["s-compact", "compactMode"],
-      ["s-disable-vote", "disableVote"],
-      ["s-no-yt", "preventYoutubeAlgorithm"],
-    ];
-    toggleMap.forEach(([elId, key]) => {
-      document.getElementById(elId)?.addEventListener("change", (e) => {
-        Store.set({ [key]: e.target.checked });
-      });
-    });
-    // 차단 방식
-    ["s-bm-remove", "s-bm-blind", "s-bm-badge"].forEach((id) => {
-      document.getElementById(id)?.addEventListener("change", (e) => {
-        if (e.target.checked) Store.set({ blockMethod: e.target.value });
-      });
-    });
-
     // 백업
     document.getElementById("s-backup")?.addEventListener("click", doBackup);
     document
@@ -1377,15 +1429,52 @@
     document
       .getElementById("s-restore-file")
       ?.addEventListener("change", doRestore);
+    document
+      .getElementById("s-restore-pp-btn")
+      ?.addEventListener("click", () =>
+        document.getElementById("s-restore-pp-file").click(),
+      );
+    document
+      .getElementById("s-restore-pp-file")
+      ?.addEventListener("change", doRestorePP);
   }
 
   function openSettingsPanel() {
     settingsPanel.classList.add("show");
+    document.body.style.overflow = "hidden";
     loadPanelData("tab-block-user");
     loadDisplaySettings();
+    bindDisplayToggles();
+  }
+
+  let _displayTogglesBound = false;
+  function bindDisplayToggles() {
+    if (_displayTogglesBound) return;
+    _displayTogglesBound = true;
+    const toggleMap = [
+      ["s-hide-notice", "hideNotice"],
+      ["s-hide-popular", "hidePopular"],
+      ["s-hide-sidebar", "hideSidebar"],
+      ["s-compact", "compactMode"],
+      ["s-disable-vote", "disableVote"],
+      ["s-no-yt", "preventYoutubeAlgorithm"],
+    ];
+    toggleMap.forEach(([elId, key]) => {
+      document.getElementById(elId)?.addEventListener("change", (e) => {
+        Store.set({ [key]: e.target.checked }).then(() => {
+          console.log("[개드립Plus] 저장:", key, e.target.checked);
+        });
+      });
+    });
+    ["s-bm-remove", "s-bm-blind", "s-bm-badge"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("change", (e) => {
+        if (e.target.checked) Store.set({ blockMethod: e.target.value });
+      });
+    });
   }
   function closeSettingsPanel() {
     settingsPanel.classList.remove("show");
+    document.body.style.overflow = "";
   }
 
   function loadPanelData(tabId) {
@@ -1684,18 +1773,76 @@
     reader.readAsText(file);
   }
 
-  /* =========================================================================
-   * 16. ESC 키 처리
-   * ========================================================================= */
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape" && e.key !== "Esc") return;
-    if (blockModalEl.classList.contains("show")) closeBlockModal();
-    if (memoModalEl.classList.contains("show")) closeMemoModal();
-    if (settingsPanel.classList.contains("show")) closeSettingsPanel();
-  });
+  function doRestorePP(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        // dogdrip++ 포맷: blocked_members 배열, keywords[].keyword 필드
+        const rawMembers = Array.isArray(data.blocked_members)
+          ? data.blocked_members
+          : [];
+        const rawKeywords = Array.isArray(data.keywords) ? data.keywords : [];
+
+        const blocked_users = rawMembers.map((u) => ({
+          date: u.date || "",
+          member_num: String(u.member_num || "").trim(),
+          memo: u.memo || "",
+        }));
+        const keywords = rawKeywords.map((k) => ({
+          date: k.date || "",
+          method: k.method || "includes",
+          target: k.target || "all",
+          word: k.keyword || k.word || "", // dogdrip++는 keyword 필드
+        }));
+
+        // 나머지 설정(개드립콘 차단, 레이아웃 등)은 현재 값 유지
+        Store.get([
+          "blockedDogcons",
+          "blockedDogconGroups",
+          "hideNotice",
+          "hidePopular",
+          "hideSidebar",
+          "compactMode",
+          "disableVote",
+          "preventYoutubeAlgorithm",
+          "contentWidth",
+          "blockMethod",
+          "userMemos",
+        ]).then((cur) => {
+          Store.set({
+            keywords,
+            blocked_users,
+            blockedDogcons: cur.blockedDogcons || [],
+            blockedDogconGroups: cur.blockedDogconGroups || [],
+            hideNotice: !!cur.hideNotice,
+            hidePopular: !!cur.hidePopular,
+            hideSidebar: !!cur.hideSidebar,
+            compactMode: !!cur.compactMode,
+            disableVote: !!cur.disableVote,
+            preventYoutubeAlgorithm: !!cur.preventYoutubeAlgorithm,
+            contentWidth: cur.contentWidth || "",
+            blockMethod: cur.blockMethod || "remove",
+            userMemos: cur.userMemos || {},
+          }).then(() => {
+            alert(
+              `🎉 Dogdrip++ 이식 완료!\n차단 유저 ${blocked_users.length}명, 키워드 ${keywords.length}개를 가져왔습니다.\n페이지를 새로고침합니다.`,
+            );
+            location.reload();
+          });
+        });
+      } catch {
+        alert("❌ 파일 형식 오류: Dogdrip++ 백업 JSON 파일을 선택하세요.");
+      }
+      event.target.value = "";
+    };
+    reader.readAsText(file);
+  }
 
   /* =========================================================================
-   * 17. MutationObserver (동적 콘텐츠)
+   * 16. MutationObserver (동적 콘텐츠)
    * ========================================================================= */
   const popupObserver = new MutationObserver((mutations) => {
     for (const m of mutations) {
@@ -1736,8 +1883,16 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["style"],
+      attributeFilter: ["style", "class"],
     });
+    // 이미 DOM에 있는 popup_menu_area에 MutationObserver 직접 연결
+    const existingPopup = document.getElementById("popup_menu_area");
+    if (existingPopup) {
+      new MutationObserver(() => handlePopupMenu(existingPopup)).observe(
+        existingPopup,
+        { attributes: true, attributeFilter: ["style", "class"] },
+      );
+    }
   }
 
   if (document.body) startObserver();
