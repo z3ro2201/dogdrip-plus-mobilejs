@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         개드립 Plus+
 // @namespace    https://dogdrip.net/
-// @version      2.0.3
+// @version      2.2.0
 // @match        *://*.dogdrip.net/*
-// @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
-// @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/z3ro2201/dogdrip-plus-mobilejs@main/dogdrip-plus.user.js
+// @updateURL    https://cdn.jsdelivr.net/gh/z3ro2201/dogdrip-plus-mobilejs@main/dogdrip-plus.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        unsafeWindow
@@ -14,7 +14,7 @@
 (function () {
   "use strict";
 
-  // 🛡️ [1단계: 하이브리드 환경 감지 및 데이터 가교]
+  // 🛡️ [1단계: 하이브리드 데이터 가교 레이어]
   const isExtensionEnv =
     typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id;
 
@@ -66,7 +66,7 @@
     };
   }
 
-  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터]
+  // 🎨 [2단계: 원 UI 모바일 대시보드 렌더링 엔진]
   function injectMobileUIAndStyles() {
     if (isExtensionEnv) return;
     if (document.getElementById("ext-mobile-dashboard-style")) return;
@@ -99,7 +99,6 @@
             .ext-mob-btn { padding: 9px 15px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; }
             .ext-mob-btn-primary { background: #3b82f6 !important; color: #fff !important; }
             .ext-mob-btn-secondary { background: #f3f4f6 !important; color: #4b5563 !important; }
-            .ext-mob-btn-danger { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
             .ext-mob-kv-list { margin: 8px 0 !important; padding: 0 !important; list-style: none !important; max-height: 140px !important; overflow-y: auto !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
             .ext-mob-kv-list li { padding: 8px 12px !important; border-bottom: 1px solid #f3f4f6 !important; display: flex !important; justify-content: space-between !important; font-size: 13px !important; background: #fff !important; color: #000 !important; }
             .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; }
@@ -151,7 +150,8 @@
       });
     }
 
-    const handleMobileInteraction = (e) => {
+    // 사파리 특화형 터치 바인딩 위임자
+    document.body.addEventListener("click", (e) => {
       const target = e.target;
       if (!target) return;
 
@@ -205,9 +205,7 @@
           window.location.reload();
         });
       }
-    };
-
-    document.body.addEventListener("click", handleMobileInteraction);
+    });
   }
 
   if (document.body) {
@@ -223,22 +221,11 @@
   }
 
   // =========================================================
-  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역]
+  // 📦 [3단계: 순정 개드립 코어 필터 백엔드 엔진 구역]
   // =========================================================
-  const blockColor = "f43f5e";
-  const grantColor = "16a34a";
-  const targetPopupMenuId = "popup_menu_area";
-
   const loadingOverlay = document.createElement("div");
   loadingOverlay.id = "ext-loading-overlay";
   loadingOverlay.innerHTML = `<div class="spinner"></div><div class="loading-text">페이지 최적화 중...</div>`;
-
-  const hybridModalOverlay = document.createElement("div");
-  hybridModalOverlay.id = "ext-hybrid-modal-overlay";
-  hybridModalOverlay.className = "ext-mob-modal-overlay";
-  hybridModalOverlay.style.cssText =
-    "position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: rgba(0,0,0,0.5) !important; z-index: 2147483645 !important; display: none !important; align-items: center !important; justify-content: center !important;";
-  hybridModalOverlay.innerHTML = `<div class="ext-mob-modal-card" id="ext-hybrid-card-content"></div>`;
 
   function removeLoadingOverlay() {
     const overlay = document.getElementById("ext-loading-overlay");
@@ -250,184 +237,22 @@
     }
   }
 
-  function injectInitialUI() {
-    if (
-      document.documentElement &&
-      !document.getElementById("ext-loading-overlay")
-    ) {
-      document.documentElement.appendChild(loadingOverlay);
-      document.documentElement.appendChild(hybridModalOverlay);
-      return true;
-    }
-    return false;
-  }
-
-  if (!injectInitialUI()) {
+  if (
+    document.documentElement &&
+    !document.getElementById("ext-loading-overlay")
+  ) {
+    document.documentElement.appendChild(loadingOverlay);
+  } else {
     const injectObserver = new MutationObserver(() => {
-      if (injectInitialUI()) injectObserver.disconnect();
+      if (
+        document.documentElement &&
+        !document.getElementById("ext-loading-overlay")
+      ) {
+        document.documentElement.appendChild(loadingOverlay);
+        injectObserver.disconnect();
+      }
     });
     injectObserver.observe(document, { childList: true, subtree: true });
-  }
-
-  let targetNicknameToBlock = "";
-  let targetMemberIdToBlock = "";
-  let targetMemoMemberId = "";
-  let selectedMemoColorStyle = "blue";
-  let lastClickedUserData = { memberId: "", nickname: "" };
-  let currentActiveDogconData = null;
-
-  function openBlockModal(nickname, memberId) {
-    targetNicknameToBlock = nickname;
-    targetMemberIdToBlock = memberId;
-    const card = document.getElementById("ext-hybrid-card-content");
-    if (!card) return;
-    card.innerHTML = `
-          <div class="ext-mob-title">🚫 사용자 차단하기</div>
-          <p style="font-size:13px; line-height:1.4; color:#4b5563; margin-bottom:14px;"><strong>${nickname}(${memberId})</strong> 유저를 차단 진형에 추가합니다. 차단 사유를 기입해 주세요.</p>
-          <input type="text" id="ext-block-reason-input" class="ext-mob-input" placeholder="차단 사유를 간략히 입력하세요..." autocomplete="off">
-          <div class="ext-mob-btn-group">
-              <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-block-cancel">취소</button>
-              <button class="ext-mob-btn ext-mob-btn-primary" id="ext-mob-block-confirm" style="background:#ef4444 !important;">차단하기</button>
-          </div>
-      `;
-    hybridModalOverlay.style.display = "flex";
-
-    document
-      .getElementById("ext-mob-block-cancel")
-      .addEventListener("click", (e) => {
-        e.preventDefault();
-        hybridModalOverlay.style.display = "none";
-      });
-    document
-      .getElementById("ext-mob-block-confirm")
-      .addEventListener("click", (e) => {
-        e.preventDefault();
-        const blockReason = document
-          .getElementById("ext-block-reason-input")
-          .value.trim();
-        const newBlockUserObj = {
-          date: "2026/05/19",
-          member_num: String(targetMemberIdToBlock).trim(),
-          memo: blockReason,
-        };
-
-        chrome.storage.local.get(["blocked_users"], (result) => {
-          const list = Array.isArray(result.blocked_users)
-            ? result.blocked_users
-            : [];
-          if (
-            !list.some(
-              (item) =>
-                String(item.member_num) === String(targetMemberIdToBlock),
-            )
-          ) {
-            list.push(newBlockUserObj);
-            chrome.storage.local.set({ blocked_users: list }, () => {
-              hybridModalOverlay.style.display = "none";
-              window.location.reload();
-            });
-          } else {
-            hybridModalOverlay.style.display = "none";
-          }
-        });
-      });
-  }
-
-  function openUserMemoModal(nickname, memberId, rawMemoData) {
-    targetMemoMemberId = memberId;
-    let currentMemoText = "";
-    selectedMemoColorStyle = "blue";
-    if (rawMemoData) {
-      if (rawMemoData.includes(":")) {
-        const parts = rawMemoData.split(":");
-        currentMemoText = parts[0];
-        selectedMemoColorStyle = parts[1] || "blue";
-      } else {
-        currentMemoText = rawMemoData;
-      }
-    }
-
-    const card = document.getElementById("ext-hybrid-card-content");
-    if (!card) return;
-    card.innerHTML = `
-          <div class="ext-mob-title">📝 유저 메모 관리</div>
-          <p style="font-size:13px; color:#4b5563; margin-bottom:10px;"><strong>${nickname}</strong> 유저에 대한 고유 메모를 적어주세요.</p>
-          <input type="text" id="ext-user-memo-modal-input" class="ext-mob-input" placeholder="메모 내용 입력..." value="${currentMemoText}" autocomplete="off">
-          <p style="font-size: 11px; font-weight: bold; color: #64748b; margin: 4px 0 6px 0;">🎨 배지 레이블 색상 선택</p>
-          <div id="ext-mob-color-box" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;"></div>
-          <div class="ext-mob-btn-group">
-              <button class="ext-mob-btn ext-mob-btn-danger" id="ext-mob-memo-delete" style="margin-right:auto; display:${currentMemoText ? "block" : "none"};">삭제</button>
-              <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-memo-cancel">취소</button>
-              <button class="ext-mob-btn ext-mob-btn-primary" id="ext-mob-memo-save">저장</button>
-          </div>
-      `;
-
-    const colors = [
-      { k: "blue", c: "#3b82f6" },
-      { k: "green", c: "#10b981" },
-      { k: "red", c: "#ef4444" },
-      { k: "yellow", c: "#f59e0b" },
-      { k: "purple", c: "#8b5cf6" },
-      { k: "gray", c: "#64748b" },
-    ];
-    const colorBox = document.getElementById("ext-mob-color-box");
-    colors.forEach((col) => {
-      const chip = document.createElement("div");
-      chip.style.cssText = `width:20px; height:20px; border-radius:50%; background:${col.c}; cursor:pointer; border:2px solid ${selectedMemoColorStyle === col.k ? "#111827" : "transparent"}`;
-      chip.addEventListener("click", () => {
-        selectedMemoColorStyle = col.k;
-        colorBox
-          .querySelectorAll("div")
-          .forEach((d) => (d.style.borderColor = "transparent"));
-        chip.style.borderColor = "#111827";
-      });
-      if (colorBox) colorBox.appendChild(chip);
-    });
-
-    hybridModalOverlay.style.display = "flex";
-    const uInput = document.getElementById("ext-user-memo-modal-input");
-    if (uInput) setTimeout(() => uInput.focus(), 80);
-
-    document
-      .getElementById("ext-mob-memo-cancel")
-      .addEventListener("click", (e) => {
-        e.preventDefault();
-        hybridModalOverlay.style.display = "none";
-      });
-    document
-      .getElementById("ext-mob-memo-delete")
-      .addEventListener("click", (e) => {
-        e.preventDefault();
-        chrome.storage.local.get(["userMemos"], (res) => {
-          const currentMemos = res.userMemos || {};
-          delete currentMemos[targetMemoMemberId];
-          chrome.storage.local.set({ userMemos: currentMemos }, () => {
-            hybridModalOverlay.style.display = "none";
-            window.location.reload();
-          });
-        });
-      });
-    document
-      .getElementById("ext-mob-memo-save")
-      .addEventListener("click", (e) => {
-        e.preventDefault();
-        const memoText = document
-          .getElementById("ext-user-memo-modal-input")
-          .value.trim();
-        chrome.storage.local.get(["userMemos"], (res) => {
-          const currentMemos = res.userMemos || {};
-          if (memoText === "") {
-            delete currentMemos[targetMemoMemberId];
-          } else {
-            currentMemos[targetMemoMemberId] =
-              `${memoText}:${selectedMemoColorStyle}`;
-          }
-          chrome.storage.local.set({ userMemos: currentMemos }, () => {
-            hybridModalOverlay.style.display = "none";
-            window.location.reload();
-          });
-        });
-      });
   }
 
   function buildBlindWrapperHTML(typeLabel, originalHTML) {
@@ -462,27 +287,14 @@
           btn.innerText = "📄 내용 보기";
         }
       });
-
-      wrapper.addEventListener("mouseenter", () => {
-        if (wrapper.classList.contains("ext-blind-fixed")) return;
-        body.style.display = "flex";
-        btn.innerText = "👀 슬쩍 보기 중...";
-      });
-      wrapper.addEventListener("mouseleave", () => {
-        if (wrapper.classList.contains("ext-blind-fixed")) return;
-        body.style.display = "none";
-        btn.innerText = "📄 내용 보기";
-      });
     });
   }
 
-  // [🛡️ 안전 필터 검사 구역]
   function createMemoBadgeElement(memberId, memoText, colorStyle) {
     if (!memoText) return null;
     const badge = document.createElement("span");
     badge.className = `ext-user-memo-badge ext-memo-${colorStyle || "blue"} ext-badge-id-${memberId}`;
     badge.innerText = memoText;
-    badge.title = `메모: ${memoText}\n(회원번호: ${memberId})`;
     return badge;
   }
 
@@ -519,15 +331,15 @@
           "blocked_users",
           "blockedDogcons",
           "blockedDogconGroups",
+          "blockMethod",
+          "userMemos",
+          "contentWidth",
           "hideNotice",
           "hidePopular",
           "hideSidebar",
           "compactMode",
           "disableVote",
           "preventYoutubeAlgorithm",
-          "contentWidth",
-          "blockMethod",
-          "userMemos",
         ],
         (result) => {
           if (chrome.runtime?.lastError) return;
@@ -557,7 +369,6 @@
 
           const htmlEl = document.documentElement;
           if (htmlEl) {
-            // 🛡️ [핵심 교정]: 가드 조건을 추가하여 문자열이 아닐 때 터지는 trim 부조화를 원천 봉쇄합니다.
             if (
               result.contentWidth &&
               typeof result.contentWidth === "string" &&
@@ -839,7 +650,6 @@
               } else {
                 row.remove();
               }
-              // 🛡️ [핵심 교정]: 잘못 표기되어 에러를 일으켰던 memos 객체 참조 구문을 currentMemberId로 되돌립니다.
             } else if (currentMemberId && memos[currentMemberId]) {
               if (
                 authorElement &&
@@ -968,22 +778,6 @@
                   if (badge) nicknameElement.after(badge);
                 }
               }
-
-              if (nicknameElement && currentMemberId) {
-                const dropdownMenu = comment.querySelector("ul.dropdown-menu");
-                if (
-                  dropdownMenu &&
-                  !dropdownMenu.querySelector(".ext-block-menu-item")
-                ) {
-                  const emptyLis = Array.from(
-                    dropdownMenu.querySelectorAll("li"),
-                  ).filter((li) => li.innerHTML.trim() === "");
-                  if (emptyLis.length > 0) {
-                    const targetLi = emptyLis[0];
-                    targetLi.innerHTML = `<a class="ext-block-menu-item"><span class="ed icon"><i class="fas fa-user-slash"></i></span>차단</a>`;
-                  }
-                }
-              }
             });
 
           // ⑥ 본문 상단 툴바 필터 제어 구역
@@ -992,38 +786,24 @@
             const authorElement = titleToolbar.querySelector(
               'a[class*="member_"]',
             );
-            const dropdownMenu = titleToolbar.querySelector("ul.dropdown-menu");
-            if (authorElement && dropdownMenu) {
+            if (
+              authorElement &&
+              memos[authorElement.className.match(/member_(\d+)/)?.[1]]
+            ) {
               const authorMemberId =
                 authorElement.className.match(/member_(\d+)/)?.[1];
-              if (authorMemberId) {
-                if (
-                  memos[authorMemberId] &&
-                  !authorElement.nextElementSibling?.classList.contains(
-                    "ext-user-memo-badge",
-                  )
-                ) {
-                  const memoData = getMemoData(authorMemberId);
-                  const badge = createMemoBadgeElement(
-                    authorMemberId,
-                    memoData.text,
-                    memoData.style,
-                  );
-                  if (badge) authorElement.after(badge);
-                }
-                const existingToolbarBtn = dropdownMenu.querySelector(
-                  ".ext-toolbar-member-block",
+              if (
+                !authorElement.nextElementSibling?.classList.contains(
+                  "ext-user-memo-badge",
+                )
+              ) {
+                const memoData = getMemoData(authorMemberId);
+                const badge = createMemoBadgeElement(
+                  authorMemberId,
+                  memoData.text,
+                  memoData.style,
                 );
-                if (existingToolbarBtn) existingToolbarBtn.remove();
-                const blockLi = document.createElement("li");
-                blockLi.className = "ext-toolbar-member-block";
-
-                if (blockedMemberIds.includes(authorMemberId)) {
-                  blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${grantColor}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-check"></i></span> 차단 해제</a>`;
-                } else {
-                  blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${blockColor}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-slash"></i></span> 차단</a>`;
-                }
-                dropdownMenu.insertBefore(blockLi, dropdownMenu.firstChild);
+                if (badge) authorElement.after(badge);
               }
             }
           }
@@ -1044,22 +824,10 @@
             img.dataset.extProcessed = "true";
             const isGroupBlocked = blockedDogconGroupIds.includes(srl);
             const isSingleBlocked = blockedDogconIds.includes(fileSrl);
-            const infoUrl = `https://www.dogdrip.net/?mid=dogcon&dogcon_srl=${srl}`;
             if (isGroupBlocked || isSingleBlocked) {
               const blockDiv = document.createElement("div");
               blockDiv.className = "ext-dogcon-blocked";
-              blockDiv.innerHTML = `🚫 <span>${title} (${alt}) 차단됨</span><a href="${infoUrl}" target="_blank" class="dogcon-info-link" style="margin-left:6px; color:#0284c7; text-decoration:underline; font-weight:bold;">[ℹ️ 정보]</a>`;
-              blockDiv
-                .querySelector(".dogcon-info-link")
-                .addEventListener("click", (e) => {
-                  e.stopPropagation();
-                });
-              blockDiv.dataset.srl = srl;
-              blockDiv.dataset.fileSrl = fileSrl;
-              blockDiv.dataset.title = title;
-              blockDiv.dataset.alt = alt;
-              blockDiv.dataset.isSingleBlocked = isSingleBlocked;
-              blockDiv.dataset.isGroupBlocked = isGroupBlocked;
+              blockDiv.innerHTML = `🚫 <span>${title} (${alt}) 차단됨</span>`;
               img.parentNode.insertBefore(blockDiv, img);
               img.remove();
             }
@@ -1085,25 +853,6 @@
                   parent.nextElementSibling.remove();
               }
             });
-            document.querySelectorAll("a.votebtn").forEach((btn) => {
-              if (btn.dataset.extVoteProcessed) return;
-              btn.dataset.extVoteProcessed = "true";
-              if (btn.getAttribute("title") === "추천") {
-                const icon = btn.querySelector("i");
-                if (icon) icon.className = "fas fa-baby";
-                const count = btn.querySelector("span.count");
-                if (count) count.remove();
-                const parent = btn.parentElement;
-                if (parent?.tagName.toLowerCase() === "span") {
-                  parent.parentNode.insertBefore(btn, parent);
-                  parent.remove();
-                }
-              }
-              if (btn.getAttribute("title") === "비추천") btn.remove();
-            });
-            document.querySelectorAll("a.comment-item-tool").forEach((link) => {
-              link.classList.remove("border-left-dotted");
-            });
           }
           if (result.preventYoutubeAlgorithm === true) {
             document
@@ -1123,14 +872,11 @@
                 }
               });
           }
-          // 🛡️ [핵심 교정]: 가람막 방어용 문자열 타입 가드 2차 확인
           if (
-            result.contentWidth &&
-            typeof result.contentWidth === "string" &&
-            result.contentWidth.trim() !== ""
+            !result.contentWidth ||
+            typeof result.contentWidth !== "string" ||
+            result.contentWidth.trim() === ""
           ) {
-            // 이미 상단에서 주입 완료
-          } else {
             document.querySelectorAll(".container").forEach((el) => {
               el.style.maxWidth = "960px";
             });
@@ -1144,47 +890,7 @@
     });
   }
 
-  // 🛡️ [사파리 위임 파이프라인]
-  document.body.addEventListener("click", (e) => {
-    const item = e.target.closest("a");
-    if (!item) return;
-
-    if (
-      (item.textContent.trim() === "차단" ||
-        item.classList.contains("ext-block-menu-item")) &&
-      item.closest("#popup_menu_area")
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      const popupMenuArea = document.getElementById("popup_menu_area");
-      if (popupMenuArea) popupMenuArea.style.display = "none";
-      openBlockModal(
-        lastClickedUserData.nickname,
-        lastClickedUserData.memberId,
-      );
-    }
-
-    if (
-      item.textContent.startsWith("메모") &&
-      item.closest("#popup_menu_area")
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      const popupMenuArea = document.getElementById("popup_menu_area");
-      if (popupMenuArea) popupMenuArea.style.display = "none";
-
-      chrome.storage.local.get(["userMemos"], (res) => {
-        const memos = res.userMemos || {};
-        const currentMemoData = memos[lastClickedUserData.memberId] || "";
-        openUserMemoModal(
-          lastClickedUserData.nickname,
-          lastClickedUserData.memberId,
-          currentMemoData,
-        );
-      });
-    }
-  });
-
+  // 🔄 동적 노드 트리 관찰자 구동
   const popupObserver = new MutationObserver((mutationsList) => {
     for (const mutation of mutationsList) {
       if (mutation.type === "childList") {
@@ -1196,57 +902,26 @@
             const hasNewMemberLink = node.querySelector?.(
               'a[class*="member_"]',
             );
-            if (
-              hasNewDogcon ||
-              hasNewMemberLink ||
-              (node.className &&
-                node.className.includes("ext-blind-container")) ||
-              (node.tagName &&
-                ["IMG", "DIV", "LI", "TR", "A"].includes(node.tagName))
-            ) {
+            if (hasNewDogcon || hasNewMemberLink) {
               setTimeout(() => {
                 attachBlindToggleEvents(document.body);
-                const targetImgs = document.querySelectorAll(
-                  "img.dogcon-clickable:not([data-ext-processed]), img[data-dogcon-srl]:not([data-ext-processed])",
-                );
-                if (targetImgs.length > 0 || hasNewMemberLink) {
-                  executeFilterWithMinTime();
-                }
+                executeFilterWithMinTime();
               }, 50);
-            }
-            if (node.id === targetPopupMenuId) {
-              handlePopupMenuDetected(node);
-            } else {
-              const nestedPopup = node.querySelector?.(`#${targetPopupMenuId}`);
-              if (nestedPopup) handlePopupMenuDetected(nestedPopup);
             }
           }
         });
-      } else if (
-        mutation.type === "attributes" &&
-        mutation.attributeName === "style"
-      ) {
-        const targetNode = mutation.target;
-        if (targetNode.id === targetPopupMenuId) {
-          handlePopupMenuDetected(targetNode);
-        }
       }
     }
   });
 
   if (document.body) {
-    startPopupObservation();
+    popupObserver.observe(document.body, { childList: true, subtree: true });
   } else {
-    document.addEventListener("DOMContentLoaded", startPopupObservation);
-  }
-  function startPopupObservation() {
-    popupObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["style"],
+    document.addEventListener("DOMContentLoaded", () => {
+      popupObserver.observe(document.body, { childList: true, subtree: true });
     });
   }
+
   if (
     document.readyState === "interactive" ||
     document.readyState === "complete"
@@ -1256,17 +931,5 @@
     document.addEventListener("DOMContentLoaded", executeFilterWithMinTime);
   }
 
-  window.addEventListener("load", () => {
-    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id) {
-      removeLoadingOverlay();
-    } else {
-      const overlay = document.getElementById("ext-loading-overlay");
-      if (overlay) {
-        overlay.style.opacity = "0";
-        setTimeout(() => {
-          overlay.remove();
-        }, 200);
-      }
-    }
-  });
+  window.addEventListener("load", removeLoadingOverlay);
 })();
