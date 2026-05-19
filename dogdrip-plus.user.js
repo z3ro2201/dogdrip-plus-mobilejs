@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+
 // @namespace    https://dogdrip.net/
-// @version      2.2.0
+// @version      2.4.0
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://cdn.jsdelivr.net/gh/z3ro2201/dogdrip-plus-mobilejs@main/dogdrip-plus.user.js
 // @updateURL    https://cdn.jsdelivr.net/gh/z3ro2201/dogdrip-plus-mobilejs@main/dogdrip-plus.user.js
@@ -14,7 +14,7 @@
 (function () {
   "use strict";
 
-  // 🛡️ [1단계: 하이브리드 데이터 가교 레이어]
+  // 🛡️ [1단계: 모바일 격리 스토리지 가교 레이어]
   const isExtensionEnv =
     typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id;
 
@@ -66,7 +66,7 @@
     };
   }
 
-  // 🎨 [2단계: 원 UI 모바일 대시보드 렌더링 엔진]
+  // 🎨 [2단계: 모바일 5대 기능 통합 제어 대시보드 뷰어]
   function injectMobileUIAndStyles() {
     if (isExtensionEnv) return;
     if (document.getElementById("ext-mobile-dashboard-style")) return;
@@ -90,18 +90,23 @@
                 background: rgba(0,0,0,0.5) !important; z-index: 2147483646 !important; display: none !important; align-items: center !important; justify-content: center !important;
             }
             .ext-mob-modal-card {
-                background: #fff !important; width: 90% !important; max-width: 360px !important; padding: 22px !important;
+                background: #fff !important; width: 92% !important; max-width: 380px !important; padding: 20px !important;
                 border-radius: 16px !important; box-shadow: 0 12px 30px rgba(0,0,0,0.2) !important; color: #111827 !important; font-family: -apple-system, sans-serif !important;
+                max-height: 85vh !important; overflow-y: auto !important;
             }
-            .ext-mob-title { font-size: 15px !important; font-weight: 700 !important; margin-bottom: 12px !important; color: #1f2937 !important; display: flex; align-items: center; gap: 6px; }
-            .ext-mob-input { width: 100% !important; padding: 10px 12px !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; font-size: 13px !important; box-sizing: border-box !important; margin-bottom: 12px !important; color: #000 !important; background: #fff !important; }
-            .ext-mob-btn-group { display: flex !important; gap: 8px !important; justify-content: flex-end !important; margin-top: 14px !important; }
-            .ext-mob-btn { padding: 9px 15px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; }
-            .ext-mob-btn-primary { background: #3b82f6 !important; color: #fff !important; }
-            .ext-mob-btn-secondary { background: #f3f4f6 !important; color: #4b5563 !important; }
-            .ext-mob-kv-list { margin: 8px 0 !important; padding: 0 !important; list-style: none !important; max-height: 140px !important; overflow-y: auto !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
-            .ext-mob-kv-list li { padding: 8px 12px !important; border-bottom: 1px solid #f3f4f6 !important; display: flex !important; justify-content: space-between !important; font-size: 13px !important; background: #fff !important; color: #000 !important; }
-            .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; }
+            .ext-mob-section-title { font-size: 14px !important; font-weight: 700 !important; margin: 16px 0 8px 0 !important; color: #1f2937 !important; display: flex; align-items: center; gap: 4px; }
+            .ext-mob-section-title:first-child { margin-top: 0 !important; }
+            .ext-mob-kv-list { margin: 6px 0 !important; padding: 0 !important; list-style: none !important; max-height: 100px !important; overflow-y: auto !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; background: #f9fafb !important; }
+            .ext-mob-kv-list li { padding: 6px 10px !important; border-bottom: 1px solid #edf2f7 !important; display: flex !important; justify-content: space-between !important; align-items: center !important; font-size: 12px !important; color: #374151 !important; }
+            .ext-mob-kv-list li:last-child { border-bottom: none !important; }
+            .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; padding: 2px 6px !important; font-size: 11px !important; user-select: none; }
+            .ext-mob-radio-group { display: flex !important; gap: 12px !important; margin-bottom: 4px !important; }
+            .ext-mob-radio-label { font-size: 12px !important; color: #4b5563 !important; display: flex !important; align-items: center !important; gap: 4px !important; cursor: pointer; }
+            
+            /* 추가 입력 폼 레이아웃 */
+            .ext-mob-form-group { display: flex !important; gap: 6px !important; margin-top: 6px !important; }
+            .ext-mob-input-box { flex: 1 !important; padding: 7px 10px !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important; font-size: 12px !important; color: #000 !important; background: #fff !important; box-sizing: border-box !important; }
+            .ext-mob-inline-btn { padding: 0 12px !important; background: #3b82f6 !important; color: #fff !important; border: none !important; border-radius: 6px !important; font-size: 12px !important; font-weight: 600 !important; }
         `;
     document.head.appendChild(style);
 
@@ -115,84 +120,279 @@
     dashboardOverlay.className = "ext-mob-modal-overlay";
     dashboardOverlay.innerHTML = `
             <div class="ext-mob-modal-card">
-                <div class="ext-mob-title">🚫 모바일 차단 키워드 관리</div>
-                <ul class="ext-mob-kv-list" id="ext-mob-kw-container"></ul>
-                <div style="display:flex; gap:6px; margin-bottom:14px;">
-                    <input type="text" id="ext-mob-new-kw-input" class="ext-mob-input" placeholder="차단할 단어 입력..." style="margin-bottom:0 !important; flex:1;">
-                    <button class="ext-mob-btn ext-mob-btn-primary" id="ext-mob-kw-add-btn" style="padding:0 14px !important;">추가</button>
+                <div class="ext-mob-section-title">🎨 차단 방법 설정</div>
+                <div class="ext-mob-radio-group">
+                    <label class="ext-mob-radio-label"><input type="radio" name="mobBlockRadio" value="blind"> 가림막 접기</label>
+                    <label class="ext-mob-radio-label"><input type="radio" name="mobBlockRadio" value="badge"> 배경/배지만 표시</label>
                 </div>
-                <div class="ext-mob-title" style="margin-top:16px;">🎨 차단 방식 설정</div>
-                <label style="display:block; font-size:13px; margin-bottom:6px; color:#374151;"><input type="radio" name="mobBlockRadio" value="blind"> 가림막으로 접기</label>
-                <label style="display:block; font-size:13px; color:#374151; margin-bottom:16px;"><input type="radio" name="mobBlockRadio" value="badge"> 글 유지하고 배경/배지만 보기</label>
-                <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mobile-dashboard-close" style="width:100% !important; font-weight:700 !important; padding:11px !important;">설정 완료 및 창 닫기</button>
+
+                <hr style="border:0; border-top:1px solid #f3f4f6; margin:12px 0;">
+
+                <div class="ext-mob-section-title">📝 키워드 차단 목록</div>
+                <ul class="ext-mob-kv-list" id="ext-mob-kw-container"></ul>
+                <div class="ext-mob-form-group">
+                    <input type="text" id="ext-input-kw" class="ext-mob-input-box" placeholder="차단할 단어 입력...">
+                    <button class="ext-mob-inline-btn" data-action="add-kw">추가</button>
+                </div>
+
+                <div class="ext-mob-section-title">🚫 차단 사용자 목록</div>
+                <ul class="ext-mob-kv-list" id="ext-mob-users-container"></ul>
+                <div class="ext-mob-form-group">
+                    <input type="number" id="ext-input-user-id" class="ext-mob-input-box" placeholder="회원번호 입력..." style="max-width:110px;">
+                    <input type="text" id="ext-input-user-reason" class="ext-mob-input-box" placeholder="차단 사유(선택)...">
+                    <button class="ext-mob-inline-btn" data-action="add-user">차단</button>
+                </div>
+
+                <div class="ext-mob-section-title">✏️ 등록된 유저 메모 목록</div>
+                <ul class="ext-mob-kv-list" id="ext-mob-memos-container"></ul>
+                <div class="ext-mob-form-group">
+                    <input type="number" id="ext-input-memo-id" class="ext-mob-input-box" placeholder="회원번호..." style="max-width:110px;">
+                    <input type="text" id="ext-input-memo-text" class="ext-mob-input-box" placeholder="메모 내용 입력...">
+                    <button class="ext-mob-inline-btn" data-action="add-memo">저장</button>
+                </div>
+
+                <div class="ext-mob-section-title">🖼️ 차단 개드립콘 목록</div>
+                <ul class="ext-mob-kv-list" id="ext-mob-dogcons-container"></ul>
+                <div class="ext-mob-form-group">
+                    <input type="number" id="ext-input-dc-id" class="ext-mob-input-box" placeholder="개드립콘 고유 ID 번호 입력...">
+                    <button class="ext-mob-inline-btn" data-action="add-dc">차단</button>
+                </div>
+
+                <button style="width:100% !important; font-weight:700 !important; padding:11px !important; margin-top:20px; background:#3b82f6; color:#fff; border:none; border-radius:10px; font-size:13px;" id="ext-mobile-dashboard-close">설정 저장 및 창 닫기</button>
             </div>
         `;
     document.body.appendChild(dashboardOverlay);
 
-    function refreshKeywordUI() {
-      chrome.storage.local.get(["keywords", "blockMethod"], (res) => {
-        let kws = Array.isArray(res.keywords) ? res.keywords : [];
-        let method = res.blockMethod || "badge";
-        const targetRadio = dashboardOverlay.querySelector(
-          `input[name="mobBlockRadio"][value="${method}"]`,
-        );
-        if (targetRadio) targetRadio.checked = true;
+    // 🔄 데이터 동기화 및 실시간 리스트 드로잉 함수
+    function refreshMobileDashboardUI() {
+      chrome.storage.local.get(
+        [
+          "keywords",
+          "blocked_users",
+          "userMemos",
+          "blockedDogcons",
+          "blockMethod",
+        ],
+        (res) => {
+          let kws = Array.isArray(res.keywords) ? res.keywords : [];
+          let users = Array.isArray(res.blocked_users) ? res.blocked_users : [];
+          let memos = res.userMemos || {};
+          let dogcons = Array.isArray(res.blockedDogcons)
+            ? res.blockedDogcons
+            : [];
+          let method = res.blockMethod || "badge";
 
-        const container = document.getElementById("ext-mob-kw-container");
-        if (container) {
-          container.innerHTML = "";
+          const targetRadio = dashboardOverlay.querySelector(
+            `input[name="mobBlockRadio"][value="${method}"]`,
+          );
+          if (targetRadio) targetRadio.checked = true;
+
+          // 1. 키워드
+          const kwBox = document.getElementById("ext-mob-kw-container");
+          kwBox.innerHTML = kws.length
+            ? ""
+            : "<li>등록된 키워드가 없습니다.</li>";
           kws.forEach((kw, idx) => {
             const li = document.createElement("li");
-            li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-idx="${idx}">삭제</span>`;
-            container.appendChild(li);
+            li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-type="kw" data-id="${idx}">제거</span>`;
+            kwBox.appendChild(li);
           });
-        }
-      });
+
+          // 2. 사용자 차단
+          const userBox = document.getElementById("ext-mob-users-container");
+          userBox.innerHTML = users.length
+            ? ""
+            : "<li>차단된 사용자가 없습니다.</li>";
+          users.forEach((u) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span>회원: ${u.member_num} ${u.memo ? `(${u.memo})` : ""}</span><span class="ext-mob-kv-del" data-type="user" data-id="${u.member_num}">해제</span>`;
+            userBox.appendChild(li);
+          });
+
+          // 3. 유저 메모
+          const memoBox = document.getElementById("ext-mob-memos-container");
+          const memoKeys = Object.keys(memos);
+          memoBox.innerHTML = memoKeys.length
+            ? ""
+            : "<li>등록된 메모가 없습니다.</li>";
+          memoKeys.forEach((mid) => {
+            let text = memos[mid];
+            if (text.includes(":")) text = text.split(":")[0];
+            const li = document.createElement("li");
+            li.innerHTML = `<span>회원 ${mid}: ${text}</span><span class="ext-mob-kv-del" data-type="memo" data-id="${mid}">삭제</span>`;
+            memoBox.appendChild(li);
+          });
+
+          // 4. 개드립콘
+          const dcBox = document.getElementById("ext-mob-dogcons-container");
+          dcBox.innerHTML = dogcons.length
+            ? ""
+            : "<li>차단된 개드립콘이 없습니다.</li>";
+          dogcons.forEach((dc) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span>콘 ID: ${dc.id}</span><span class="ext-mob-kv-del" data-type="dc" data-id="${dc.id}">해제</span>`;
+            dcBox.appendChild(li);
+          });
+        },
+      );
     }
 
-    // 사파리 특화형 터치 바인딩 위임자
+    // 🎯 [사파리 단일 터치 통제소]: 위임식 리스너 통합으로 먹통 버그 원천 봉쇄
     document.body.addEventListener("click", (e) => {
       const target = e.target;
       if (!target) return;
 
+      // 대시보드 열기
       if (target.id === "ext-mobile-setup-trigger") {
         e.preventDefault();
         e.stopPropagation();
-        refreshKeywordUI();
+        refreshMobileDashboardUI();
         dashboardOverlay.style.display = "flex";
       }
 
-      if (target.id === "ext-mob-kw-add-btn") {
-        e.preventDefault();
-        e.stopPropagation();
-        const input = document.getElementById("ext-mob-new-kw-input");
-        const val = input ? input.value.trim() : "";
-        if (!val) return;
-        chrome.storage.local.get(["keywords"], (res) => {
-          let kws = Array.isArray(res.keywords) ? res.keywords : [];
-          if (!kws.includes(val)) {
-            kws.push(val);
-            chrome.storage.local.set({ keywords: kws }, () => {
-              if (input) input.value = "";
-              refreshKeywordUI();
-            });
-          }
-        });
-      }
-
+      // [실시간 데이터 삭제 제어 분기]
       if (target.classList.contains("ext-mob-kv-del")) {
         e.preventDefault();
         e.stopPropagation();
-        const idx = parseInt(target.dataset.idx);
-        chrome.storage.local.get(["keywords"], (res) => {
-          let kws = Array.isArray(res.keywords) ? res.keywords : [];
-          kws.splice(idx, 1);
-          chrome.storage.local.set({ keywords: kws }, () => {
-            refreshKeywordUI();
-          });
-        });
+        const type = target.dataset.type;
+        const id = target.dataset.id;
+
+        chrome.storage.local.get(
+          ["keywords", "blocked_users", "userMemos", "blockedDogcons"],
+          (res) => {
+            if (type === "kw") {
+              let kws = Array.isArray(res.keywords) ? res.keywords : [];
+              kws.splice(parseInt(id), 1);
+              chrome.storage.local.set(
+                { keywords: kws },
+                refreshMobileDashboardUI,
+              );
+            }
+            if (type === "user") {
+              let users = Array.isArray(res.blocked_users)
+                ? res.blocked_users
+                : [];
+              users = users.filter((u) => String(u.member_num) !== String(id));
+              chrome.storage.local.set(
+                { blocked_users: users },
+                refreshMobileDashboardUI,
+              );
+            }
+            if (type === "memo") {
+              let memos = res.userMemos || {};
+              delete memos[id];
+              chrome.storage.local.set(
+                { userMemos: memos },
+                refreshMobileDashboardUI,
+              );
+            }
+            if (type === "dc") {
+              let dcs = Array.isArray(res.blockedDogcons)
+                ? res.blockedDogcons
+                : [];
+              dcs = dcs.filter((d) => String(d.id) !== String(id));
+              chrome.storage.local.set(
+                { blockedDogcons: dcs },
+                refreshMobileDashboardUI,
+              );
+            }
+          },
+        );
       }
 
+      // [실시간 수동 추가 폼 제어 분기]
+      if (target.classList.contains("ext-mob-inline-btn")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = target.dataset.action;
+
+        chrome.storage.local.get(
+          ["keywords", "blocked_users", "userMemos", "blockedDogcons"],
+          (res) => {
+            // 키워드 추가
+            if (action === "add-kw") {
+              const input = document.getElementById("ext-input-kw");
+              const val = input ? input.value.trim() : "";
+              if (val) {
+                let list = Array.isArray(res.keywords) ? res.keywords : [];
+                if (!list.includes(val)) list.push(val);
+                chrome.storage.local.set({ keywords: list }, () => {
+                  input.value = "";
+                  refreshMobileDashboardUI();
+                });
+              }
+            }
+            // 사용자 차단 추가
+            if (action === "add-user") {
+              const inputId = document.getElementById("ext-input-user-id");
+              const inputReason = document.getElementById(
+                "ext-input-user-reason",
+              );
+              const uid = inputId ? inputId.value.trim() : "";
+              const reason = inputReason
+                ? inputReason.value.trim()
+                : "수동 차단";
+              if (uid) {
+                let list = Array.isArray(res.blocked_users)
+                  ? res.blocked_users
+                  : [];
+                if (!list.some((u) => String(u.member_num) === String(uid))) {
+                  list.push({
+                    date: "2026/05/20",
+                    member_num: String(uid),
+                    memo: reason,
+                  });
+                }
+                chrome.storage.local.set({ blocked_users: list }, () => {
+                  if (inputId) inputId.value = "";
+                  if (inputReason) inputReason.value = "";
+                  refreshMobileDashboardUI();
+                });
+              }
+            }
+            // 메모 추가
+            if (action === "add-memo") {
+              const inputId = document.getElementById("ext-input-memo-id");
+              const inputText = document.getElementById("ext-input-memo-text");
+              const mid = inputId ? inputId.value.trim() : "";
+              const text = inputText ? inputText.value.trim() : "";
+              if (mid && text) {
+                let memos = res.userMemos || {};
+                memos[mid] = `${text}:blue`; // 기본 파란색 배지 지정
+                chrome.storage.local.set({ userMemos: memos }, () => {
+                  if (inputId) inputId.value = "";
+                  if (inputText) inputText.value = "";
+                  refreshMobileDashboardUI();
+                });
+              }
+            }
+            // 개드립콘 차단 추가
+            if (action === "add-dc") {
+              const input = document.getElementById("ext-input-dc-id");
+              const dcId = input ? input.value.trim() : "";
+              if (dcId) {
+                let list = Array.isArray(res.blocked_dogcons)
+                  ? res.blocked_dogcons
+                  : Array.isArray(res.blockedDogcons)
+                    ? res.blockedDogcons
+                    : [];
+                if (!list.some((d) => String(d.id) === String(dcId))) {
+                  list.push({ id: dcId, name: `콘 ${dcId}` });
+                }
+                chrome.storage.local.set(
+                  { blockedDogcons: list, blocked_dogcons: list },
+                  () => {
+                    input.value = "";
+                    refreshMobileDashboardUI();
+                  },
+                );
+              }
+            }
+          },
+        );
+      }
+
+      // 대시보드 완료 닫기
       if (target.id === "ext-mobile-dashboard-close") {
         e.preventDefault();
         e.stopPropagation();
@@ -262,7 +462,7 @@
             <span>🛡️ 차단된 사용자의 ${typeLabel}입니다.</span>
             <a href="#" class="ext-blind-toggle-btn" onclick="return false;">📄 내용 보기</a>
           </div>
-          <div class="ext-blind-body">${originalHTML}</div>
+          <div class="ext-blind-header-body" style="display:none;">${originalHTML}</div>
         </div>
       `;
   }
@@ -272,7 +472,9 @@
       if (wrapper.dataset.bound) return;
       wrapper.dataset.bound = "true";
       const btn = wrapper.querySelector(".ext-blind-toggle-btn");
-      const body = wrapper.querySelector(".ext-blind-body");
+      const body =
+        wrapper.querySelector(".ext-blind-header-body") ||
+        wrapper.querySelector(".ext-blind-body");
       if (!body || !btn) return;
 
       btn.addEventListener("click", (e) => {
@@ -280,7 +482,7 @@
         e.stopPropagation();
         const isFixed = wrapper.classList.toggle("ext-blind-fixed");
         if (isFixed) {
-          body.style.display = "flex";
+          body.style.display = "block";
           btn.innerText = "❌ 내용 숨기기";
         } else {
           body.style.display = "none";
@@ -322,124 +524,180 @@
     return false;
   }
 
-  function executeFilterWithMinTime() {
-    const minTimePromise = new Promise((resolve) => setTimeout(resolve, 1000));
-    const filterPromise = new Promise((resolve) => {
-      chrome.storage.local.get(
-        [
-          "keywords",
-          "blocked_users",
-          "blockedDogcons",
-          "blockedDogconGroups",
-          "blockMethod",
-          "userMemos",
-          "contentWidth",
-          "hideNotice",
-          "hidePopular",
-          "hideSidebar",
-          "compactMode",
-          "disableVote",
-          "preventYoutubeAlgorithm",
-        ],
-        (result) => {
-          if (chrome.runtime?.lastError) return;
-          const filterKeywords = Array.isArray(result.keywords)
-            ? result.keywords
+  function detectBlockedListContext() {
+    chrome.storage.local.get(
+      [
+        "keywords",
+        "blocked_users",
+        "blockedDogcons",
+        "blockedDogconGroups",
+        "blockMethod",
+        "userMemos",
+        "contentWidth",
+        "hideNotice",
+        "hidePopular",
+        "hideSidebar",
+        "compactMode",
+        "disableVote",
+        "preventYoutubeAlgorithm",
+      ],
+      (result) => {
+        if (chrome.runtime?.lastError) return;
+        const filterKeywords = Array.isArray(result.keywords)
+          ? result.keywords
+          : [];
+        const blockedUsers = Array.isArray(result.blocked_users)
+          ? result.blocked_users
+          : [];
+        const blockedDogcons = Array.isArray(result.blockedDogcons)
+          ? result.blockedDogcons
+          : Array.isArray(result.blocked_dogcons)
+            ? result.blocked_dogcons
             : [];
-          const blockedUsers = Array.isArray(result.blocked_users)
-            ? result.blocked_users
-            : [];
-          const blockedDogcons = Array.isArray(result.blockedDogcons)
-            ? result.blockedDogcons
-            : [];
-          const blockedDogconGroups = Array.isArray(result.blockedDogconGroups)
-            ? result.blockedDogconGroups
-            : [];
-          const isBlindMode = result.blockMethod === "blind";
-          const isBadgeMode = result.blockMethod === "badge";
-          const memos = result.userMemos || {};
+        const isBlindMode = result.blockMethod === "blind";
+        const isBadgeMode = result.blockMethod === "badge";
+        const memos = result.userMemos || {};
 
-          const blockedMemberIds = blockedUsers
-            .map((u) => String(u.member_num).trim())
-            .filter((id) => id !== "");
-          const blockedDogconIds = blockedDogcons.map((item) => item.id);
-          const blockedDogconGroupIds = blockedDogconGroups.map(
-            (item) => item.id,
-          );
+        const blockedMemberIds = blockedUsers
+          .map((u) => String(u.member_num).trim())
+          .filter((id) => id !== "");
+        const blockedDogconIds = blockedDogcons.map((item) => String(item.id));
 
-          const htmlEl = document.documentElement;
-          if (htmlEl) {
+        const htmlEl = document.documentElement;
+        if (htmlEl) {
+          if (
+            result.contentWidth &&
+            typeof result.contentWidth === "string" &&
+            result.contentWidth.trim() !== ""
+          ) {
+            htmlEl.style.setProperty(
+              "--ext-custom-width",
+              result.contentWidth.trim(),
+            );
+          }
+        }
+
+        function getMemoData(mid) {
+          const rawData = memos[mid];
+          if (!rawData) return { text: "", style: "blue" };
+          if (rawData.includes(":")) {
+            const parts = rawData.split(":");
+            return { text: parts[0], style: parts[1] };
+          }
+          return { text: rawData, style: "blue" };
+        }
+
+        // ① 웹진형 레이아웃 필터
+        document.querySelectorAll("li.webzine").forEach((article) => {
+          const titleElement = article.querySelector(".title-link");
+          const nicknameElement = article.querySelector('a[class*="member_"]');
+          let shouldRemove = false;
+          let shouldBlind = false;
+
+          if (titleElement && filterKeywords.length > 0) {
+            const titleText = titleElement.textContent.trim();
             if (
-              result.contentWidth &&
-              typeof result.contentWidth === "string" &&
-              result.contentWidth.trim() !== ""
+              filterKeywords.some((kw) =>
+                checkKeywordMatchCondition(titleText, kw, "posts"),
+              )
             ) {
-              htmlEl.style.setProperty(
-                "--ext-custom-width",
-                result.contentWidth.trim(),
+              shouldRemove = true;
+            }
+          }
+
+          let currentMemberId = "";
+          if (nicknameElement) {
+            const match = nicknameElement.className.match(/member_(\d+)/);
+            if (match) {
+              currentMemberId = match[1];
+              if (blockedMemberIds.includes(currentMemberId))
+                shouldBlind = true;
+            }
+          }
+
+          if (shouldRemove) {
+            article.remove();
+            return;
+          }
+          if (shouldBlind) {
+            if (
+              currentMemberId &&
+              nicknameElement &&
+              !article.querySelector(`.ext-badge-id-${currentMemberId}`)
+            ) {
+              const userObj = blockedUsers.find(
+                (u) => String(u.member_num) === String(currentMemberId),
               );
+              if (userObj && userObj.memo && userObj.memo.trim() !== "") {
+                const blockBadge = createMemoBadgeElement(
+                  currentMemberId,
+                  userObj.memo.trim(),
+                  "red-solid",
+                );
+                if (blockBadge) nicknameElement.after(blockBadge);
+              }
             }
-            if (result.hideNotice === true)
-              htmlEl.classList.add("ext-hide-notice");
-            if (result.hidePopular === true)
-              htmlEl.classList.add("ext-hide-popular");
-            if (result.hideSidebar === true)
-              htmlEl.classList.add("ext-hide-sidebar");
-            if (result.compactMode === true)
-              htmlEl.classList.add("ext-hide-compact");
-            if (result.disableVote === true)
-              htmlEl.classList.add("ext-hide-vote");
-          }
-
-          function getMemoData(mid) {
-            const rawData = memos[mid];
-            if (!rawData) return { text: "", style: "blue" };
-            if (rawData.includes(":")) {
-              const parts = rawData.split(":");
-              return { text: parts[0], style: parts[1] };
+            if (isBadgeMode) {
+              article.style.backgroundColor = "#fff1f2";
+              article.classList.add("ext-blocked-user-layout");
+              return;
             }
-            return { text: rawData, style: "blue" };
+            if (article.dataset.extFiltered) return;
+            article.dataset.extFiltered = "true";
+            if (isBlindMode) {
+              const cacheHTML = article.innerHTML;
+              article.innerHTML = buildBlindWrapperHTML("게시글", cacheHTML);
+              attachBlindToggleEvents(article);
+            } else {
+              article.remove();
+            }
+          } else if (currentMemberId && memos[currentMemberId]) {
+            if (
+              nicknameElement &&
+              !article.querySelector(`.ext-badge-id-${currentMemberId}`)
+            ) {
+              const memoData = getMemoData(currentMemberId);
+              const badge = createMemoBadgeElement(
+                currentMemberId,
+                memoData.text,
+                memoData.style,
+              );
+              if (badge) nicknameElement.after(badge);
+            }
           }
+        });
 
-          // ① 웹진형 레이아웃 필터
-          document.querySelectorAll("li.webzine").forEach((article) => {
-            const titleElement = article.querySelector(".title-link");
-            const nicknameElement = article.querySelector(
+        // ② 인기글 및 ③ 최근글 구역 복합 필터
+        document
+          .querySelectorAll("li span.title a, li div.eq span.text-link")
+          .forEach((titleEl) => {
+            const parentLi = titleEl.closest("li");
+            if (!parentLi) return;
+            const nicknameElement = parentLi.querySelector(
               'a[class*="member_"]',
             );
-            let shouldRemove = false;
-            let shouldBlind = false;
+            let currentMemberId = "";
+            if (nicknameElement) {
+              const match = nicknameElement.className.match(/member_(\d+)/);
+              if (match) currentMemberId = match[1];
+            }
 
-            if (titleElement && filterKeywords.length > 0) {
-              const titleText = titleElement.textContent.trim();
+            if (filterKeywords.length > 0) {
+              const titleText = titleEl.textContent.trim();
               if (
                 filterKeywords.some((kw) =>
                   checkKeywordMatchCondition(titleText, kw, "posts"),
                 )
               ) {
-                shouldRemove = true;
+                parentLi.remove();
+                return;
               }
             }
 
-            let currentMemberId = "";
-            if (nicknameElement) {
-              const match = nicknameElement.className.match(/member_(\d+)/);
-              if (match) {
-                currentMemberId = match[1];
-                if (blockedMemberIds.includes(currentMemberId))
-                  shouldBlind = true;
-              }
-            }
-
-            if (shouldRemove) {
-              article.remove();
-              return;
-            }
-            if (shouldBlind) {
+            if (currentMemberId && blockedMemberIds.includes(currentMemberId)) {
               if (
-                currentMemberId &&
                 nicknameElement &&
-                !article.querySelector(`.ext-badge-id-${currentMemberId}`)
+                !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)
               ) {
                 const userObj = blockedUsers.find(
                   (u) => String(u.member_num) === String(currentMemberId),
@@ -454,23 +712,23 @@
                 }
               }
               if (isBadgeMode) {
-                article.style.backgroundColor = "#fff1f2";
-                article.classList.add("ext-blocked-user-layout");
+                parentLi.style.backgroundColor = "#fff1f2";
+                parentLi.classList.add("ext-blocked-user-layout");
                 return;
               }
-              if (article.dataset.extFiltered) return;
-              article.dataset.extFiltered = "true";
+              if (parentLi.dataset.extFiltered) return;
+              parentLi.dataset.extFiltered = "true";
               if (isBlindMode) {
-                const cacheHTML = article.innerHTML;
-                article.innerHTML = buildBlindWrapperHTML("게시글", cacheHTML);
-                attachBlindToggleEvents(article);
+                const cacheHTML = parentLi.innerHTML;
+                parentLi.innerHTML = buildBlindWrapperHTML("게시글", cacheHTML);
+                attachBlindToggleEvents(parentLi);
               } else {
-                article.remove();
+                parentLi.remove();
               }
             } else if (currentMemberId && memos[currentMemberId]) {
               if (
                 nicknameElement &&
-                !article.querySelector(`.ext-badge-id-${currentMemberId}`)
+                !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)
               ) {
                 const memoData = getMemoData(currentMemberId);
                 const badge = createMemoBadgeElement(
@@ -483,414 +741,262 @@
             }
           });
 
-          // ② 인기글 및 ③ 최근글 구역 복합 필터
-          document
-            .querySelectorAll("li span.title a, li div.eq span.text-link")
-            .forEach((titleEl) => {
-              const parentLi = titleEl.closest("li");
-              if (!parentLi) return;
-              const nicknameElement = parentLi.querySelector(
-                'a[class*="member_"]',
+        // ④ 테이블형 레이아웃 필터 (tr.ed)
+        document.querySelectorAll("tr.ed").forEach((row) => {
+          const titleElement = row.querySelector(".title");
+          const authorElement = row.querySelector(
+            ".author a[class*='member_']",
+          );
+          let shouldRemove = false;
+          let shouldBlind = false;
+
+          if (titleElement && filterKeywords.length > 0) {
+            const realTitleLink = titleElement.querySelector(".title-link");
+            let titleText = "";
+            if (realTitleLink) {
+              titleText = realTitleLink.textContent.trim();
+            } else {
+              const mainLink = titleElement.querySelector(
+                'a[href*="dogdrip.net/"], a[href^="/"]',
               );
-              let currentMemberId = "";
-              if (nicknameElement) {
-                const match = nicknameElement.className.match(/member_(\d+)/);
-                if (match) currentMemberId = match[1];
-              }
-
-              if (filterKeywords.length > 0) {
-                const titleText = titleEl.textContent.trim();
-                if (
-                  filterKeywords.some((kw) =>
-                    checkKeywordMatchCondition(titleText, kw, "posts"),
-                  )
-                ) {
-                  parentLi.remove();
-                  return;
-                }
-              }
-
-              if (
-                currentMemberId &&
-                blockedMemberIds.includes(currentMemberId)
-              ) {
-                if (
-                  nicknameElement &&
-                  !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)
-                ) {
-                  const userObj = blockedUsers.find(
-                    (u) => String(u.member_num) === String(currentMemberId),
-                  );
-                  if (userObj && userObj.memo && userObj.memo.trim() !== "") {
-                    const blockBadge = createMemoBadgeElement(
-                      currentMemberId,
-                      userObj.memo.trim(),
-                      "red-solid",
-                    );
-                    if (blockBadge) nicknameElement.after(blockBadge);
-                  }
-                }
-                if (isBadgeMode) {
-                  parentLi.style.backgroundColor = "#fff1f2";
-                  parentLi.classList.add("ext-blocked-user-layout");
-                  return;
-                }
-                if (parentLi.dataset.extFiltered) return;
-                parentLi.dataset.extFiltered = "true";
-                if (isBlindMode) {
-                  const cacheHTML = parentLi.innerHTML;
-                  parentLi.innerHTML = buildBlindWrapperHTML(
-                    "게시글",
-                    cacheHTML,
-                  );
-                  attachBlindToggleEvents(parentLi);
-                } else {
-                  parentLi.remove();
-                }
-              } else if (currentMemberId && memos[currentMemberId]) {
-                if (
-                  nicknameElement &&
-                  !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)
-                ) {
-                  const memoData = getMemoData(currentMemberId);
-                  const badge = createMemoBadgeElement(
-                    currentMemberId,
-                    memoData.text,
-                    memoData.style,
-                  );
-                  if (badge) nicknameElement.after(badge);
-                }
-              }
-            });
-
-          // ④ 테이블형 레이아웃 필터 (tr.ed)
-          document.querySelectorAll("tr.ed").forEach((row) => {
-            const titleElement = row.querySelector(".title");
-            const authorElement = row.querySelector(
-              ".author a[class*='member_']",
-            );
-            let shouldRemove = false;
-            let shouldBlind = false;
-
-            if (titleElement && filterKeywords.length > 0) {
-              const realTitleLink = titleElement.querySelector(".title-link");
-              let titleText = "";
-              if (realTitleLink) {
-                titleText = realTitleLink.textContent.trim();
+              if (mainLink) {
+                let cloneLink = mainLink.cloneNode(true);
+                const replyBadge = cloneLink.querySelector(".text-primary");
+                if (replyBadge) replyBadge.remove();
+                titleText = cloneLink.textContent
+                  .replace(/\[.*?\]/g, "")
+                  .trim();
               } else {
-                const mainLink = titleElement.querySelector(
-                  'a[href*="dogdrip.net/"], a[href^="/"]',
-                );
-                if (mainLink) {
-                  let cloneLink = mainLink.cloneNode(true);
-                  const replyBadge = cloneLink.querySelector(".text-primary");
-                  if (replyBadge) replyBadge.remove();
-                  titleText = cloneLink.textContent
-                    .replace(/\[.*?\]/g, "")
-                    .trim();
-                } else {
-                  titleText = titleElement.textContent.trim();
-                }
-              }
-              const cleanTitleText = titleText
-                .replace(/[\s\n\r\t]+/g, " ")
-                .trim();
-              if (
-                filterKeywords.some((kw) =>
-                  checkKeywordMatchCondition(cleanTitleText, kw, "posts"),
-                )
-              ) {
-                shouldRemove = true;
+                titleText = titleElement.textContent.trim();
               }
             }
-
-            let currentMemberId = "";
-            if (authorElement) {
-              const match = authorElement.className.match(/member_(\d+)/);
-              if (match) {
-                currentMemberId = match[1];
-                if (blockedMemberIds.includes(currentMemberId))
-                  shouldBlind = true;
-              }
-            }
-
-            if (shouldRemove) {
-              row.remove();
-              return;
-            }
-            if (shouldBlind) {
-              if (
-                currentMemberId &&
-                authorElement &&
-                !row.querySelector(`.ext-badge-id-${currentMemberId}`)
-              ) {
-                const userObj = blockedUsers.find(
-                  (u) => String(u.member_num) === String(currentMemberId),
-                );
-                if (userObj && userObj.memo && userObj.memo.trim() !== "") {
-                  const blockBadge = createMemoBadgeElement(
-                    currentMemberId,
-                    userObj.memo.trim(),
-                    "red-solid",
-                  );
-                  if (blockBadge) authorElement.after(blockBadge);
-                }
-              }
-              if (isBadgeMode) {
-                row.style.backgroundColor = "#fff1f2";
-                row.classList.add("ext-blocked-user-layout");
-                return;
-              }
-              if (row.dataset.extFiltered) return;
-              row.dataset.extFiltered = "true";
-              if (isBlindMode) {
-                const cacheHTML = row.innerHTML;
-                row.innerHTML = `<td colspan="6" style="padding: 0;">${buildBlindWrapperHTML("게시글", `<table><tr>${cacheHTML}</tr></table>`)}</td>`;
-                attachBlindToggleEvents(row);
-              } else {
-                row.remove();
-              }
-            } else if (currentMemberId && memos[currentMemberId]) {
-              if (
-                authorElement &&
-                !row.querySelector(`.ext-badge-id-${currentMemberId}`)
-              ) {
-                const memoData = getMemoData(currentMemberId);
-                const badge = createMemoBadgeElement(
-                  currentMemberId,
-                  memoData.text,
-                  memoData.style,
-                );
-                if (badge) authorElement.after(badge);
-              }
-            }
-          });
-
-          // ⑤ 댓글 영역 필터
-          document
-            .querySelectorAll(".ed.comment-content")
-            .forEach((comment) => {
-              const nicknameElement = comment.querySelector(
-                'a[class*="member_"]',
-              );
-              let shouldKeywordRemove = false;
-              const commentBodyTextEl = comment.querySelector(
-                ".xe_content, .comment-text",
-              );
-
-              if (commentBodyTextEl && filterKeywords.length > 0) {
-                const rawContent = (
-                  commentBodyTextEl.innerText ||
-                  commentBodyTextEl.textContent ||
-                  ""
-                ).replace(/[\s\n\r\t]+/g, " ");
-                const commentText = rawContent.trim();
-                if (
-                  filterKeywords.some((kw) =>
-                    checkKeywordMatchCondition(commentText, kw, "comments"),
-                  )
-                ) {
-                  shouldKeywordRemove = true;
-                }
-              }
-
-              if (shouldKeywordRemove) {
-                const totalCommentTarget =
-                  comment.closest("li, div.comment-item") || comment;
-                if (totalCommentTarget.dataset.extFiltered) return;
-                totalCommentTarget.dataset.extFiltered = "true";
-                if (isBlindMode) {
-                  const cacheHTML = totalCommentTarget.innerHTML;
-                  totalCommentTarget.innerHTML = buildBlindWrapperHTML(
-                    "키워드가 포함된 댓글",
-                    cacheHTML,
-                  );
-                  attachBlindToggleEvents(totalCommentTarget);
-                } else {
-                  totalCommentTarget.remove();
-                }
-                return;
-              }
-
-              let currentMemberId = "";
-              if (nicknameElement) {
-                const match = nicknameElement.className.match(/member_(\d+)/);
-                if (match) currentMemberId = match[1];
-              }
-
-              if (
-                currentMemberId &&
-                blockedMemberIds.length > 0 &&
-                blockedMemberIds.includes(currentMemberId)
-              ) {
-                if (
-                  nicknameElement &&
-                  !comment.querySelector(`.ext-badge-id-${currentMemberId}`)
-                ) {
-                  const userObj = blockedUsers.find(
-                    (u) => String(u.member_num) === String(currentMemberId),
-                  );
-                  if (userObj && userObj.memo && userObj.memo.trim() !== "") {
-                    const blockBadge = createMemoBadgeElement(
-                      currentMemberId,
-                      userObj.memo.trim(),
-                      "red-solid",
-                    );
-                    if (blockBadge) nicknameElement.after(blockBadge);
-                  }
-                }
-                const totalCommentTarget =
-                  comment.closest("li, div.comment-item") || comment;
-                if (totalCommentTarget.dataset.extFiltered) return;
-                totalCommentTarget.dataset.extFiltered = "true";
-
-                if (isBlindMode) {
-                  const cacheHTML = totalCommentTarget.innerHTML;
-                  totalCommentTarget.innerHTML = buildBlindWrapperHTML(
-                    "댓글",
-                    cacheHTML,
-                  );
-                  attachBlindToggleEvents(totalCommentTarget);
-                } else if (isBadgeMode) {
-                  totalCommentTarget.style.backgroundColor = "#fff1f2";
-                  totalCommentTarget.classList.add("ext-blocked-user-layout");
-                } else {
-                  totalCommentTarget.remove();
-                }
-                return;
-              }
-
-              if (
-                nicknameElement &&
-                currentMemberId &&
-                memos[currentMemberId]
-              ) {
-                if (
-                  nicknameElement &&
-                  !comment.querySelector(`.ext-badge-id-${currentMemberId}`)
-                ) {
-                  const memoData = getMemoData(currentMemberId);
-                  const badge = createMemoBadgeElement(
-                    currentMemberId,
-                    memoData.text,
-                    memoData.style,
-                  );
-                  if (badge) nicknameElement.after(badge);
-                }
-              }
-            });
-
-          // ⑥ 본문 상단 툴바 필터 제어 구역
-          const titleToolbar = document.querySelector(".title-toolbar");
-          if (titleToolbar) {
-            const authorElement = titleToolbar.querySelector(
-              'a[class*="member_"]',
-            );
+            const cleanTitleText = titleText
+              .replace(/[\s\n\r\t]+/g, " ")
+              .trim();
             if (
-              authorElement &&
-              memos[authorElement.className.match(/member_(\d+)/)?.[1]]
+              filterKeywords.some((kw) =>
+                checkKeywordMatchCondition(cleanTitleText, kw, "posts"),
+              )
             ) {
-              const authorMemberId =
-                authorElement.className.match(/member_(\d+)/)?.[1];
-              if (
-                !authorElement.nextElementSibling?.classList.contains(
-                  "ext-user-memo-badge",
-                )
-              ) {
-                const memoData = getMemoData(authorMemberId);
-                const badge = createMemoBadgeElement(
-                  authorMemberId,
-                  memoData.text,
-                  memoData.style,
-                );
-                if (badge) authorElement.after(badge);
-              }
+              shouldRemove = true;
             }
           }
 
-          // ⑦ 개드립콘 처리 구역
-          const dogconImgs = document.querySelectorAll(
-            "img.dogcon-clickable, img[data-dogcon-srl]",
+          let currentMemberId = "";
+          if (authorElement) {
+            const match = authorElement.className.match(/member_(\d+)/);
+            if (match) {
+              currentMemberId = match[1];
+              if (blockedMemberIds.includes(currentMemberId))
+                shouldBlind = true;
+            }
+          }
+
+          if (shouldRemove) {
+            row.remove();
+            return;
+          }
+          if (shouldBlind) {
+            if (
+              currentMemberId &&
+              authorElement &&
+              !row.querySelector(`.ext-badge-id-${currentMemberId}`)
+            ) {
+              const userObj = blockedUsers.find(
+                (u) => String(u.member_num) === String(currentMemberId),
+              );
+              if (userObj && userObj.memo && userObj.memo.trim() !== "") {
+                const blockBadge = createMemoBadgeElement(
+                  currentMemberId,
+                  userObj.memo.trim(),
+                  "red-solid",
+                );
+                if (blockBadge) authorElement.after(blockBadge);
+              }
+            }
+            if (isBadgeMode) {
+              row.style.backgroundColor = "#fff1f2";
+              row.classList.add("ext-blocked-user-layout");
+              return;
+            }
+            if (row.dataset.extFiltered) return;
+            row.dataset.extFiltered = "true";
+            if (isBlindMode) {
+              const cacheHTML = row.innerHTML;
+              row.innerHTML = `<td colspan="6" style="padding: 0;">${buildBlindWrapperHTML("게시글", `<table><tr>${cacheHTML}</tr></table>`)}</td>`;
+              attachBlindToggleEvents(row);
+            } else {
+              row.remove();
+            }
+          } else if (currentMemberId && memos[currentMemberId]) {
+            if (
+              authorElement &&
+              !row.querySelector(`.ext-badge-id-${currentMemberId}`)
+            ) {
+              const memoData = getMemoData(currentMemberId);
+              const badge = createMemoBadgeElement(
+                currentMemberId,
+                memoData.text,
+                memoData.style,
+              );
+              if (badge) authorElement.after(badge);
+            }
+          }
+        });
+
+        // ⑤ 댓글 영역 필터
+        document.querySelectorAll(".ed.comment-content").forEach((comment) => {
+          const nicknameElement = comment.querySelector('a[class*="member_"]');
+          let shouldKeywordRemove = false;
+          const commentBodyTextEl = comment.querySelector(
+            ".xe_content, .comment-text",
           );
-          dogconImgs.forEach((img) => {
-            const srl = img.getAttribute("data-dogcon-srl");
+
+          if (commentBodyTextEl && filterKeywords.length > 0) {
+            const rawContent = (
+              commentBodyTextEl.innerText ||
+              commentBodyTextEl.textContent ||
+              ""
+            ).replace(/[\s\n\r\t]+/g, " ");
+            const commentText = rawContent.trim();
+            if (
+              filterKeywords.some((kw) =>
+                checkKeywordMatchCondition(commentText, kw, "comments"),
+              )
+            ) {
+              shouldKeywordRemove = true;
+            }
+          }
+
+          if (shouldKeywordRemove) {
+            const totalCommentTarget =
+              comment.closest("li, div.comment-item") || comment;
+            if (totalCommentTarget.dataset.extFiltered) return;
+            totalCommentTarget.dataset.extFiltered = "true";
+            if (isBlindMode) {
+              const cacheHTML = totalCommentTarget.innerHTML;
+              totalCommentTarget.innerHTML = buildBlindWrapperHTML(
+                "키워드가 포함된 댓글",
+                cacheHTML,
+              );
+              attachBlindToggleEvents(totalCommentTarget);
+            } else {
+              totalCommentTarget.remove();
+            }
+            return;
+          }
+
+          let currentMemberId = "";
+          if (nicknameElement) {
+            const match = nicknameElement.className.match(/member_(\d+)/);
+            if (match) currentMemberId = match[1];
+          }
+
+          if (
+            currentMemberId &&
+            blockedMemberIds.length > 0 &&
+            blockedMemberIds.includes(currentMemberId)
+          ) {
+            if (
+              nicknameElement &&
+              !comment.querySelector(`.ext-badge-id-${currentMemberId}`)
+            ) {
+              const userObj = blockedUsers.find(
+                (u) => String(u.member_num) === String(currentMemberId),
+              );
+              if (userObj && userObj.memo && userObj.memo.trim() !== "") {
+                const blockBadge = createMemoBadgeElement(
+                  currentMemberId,
+                  userObj.memo.trim(),
+                  "red-solid",
+                );
+                if (blockBadge) nicknameElement.after(blockBadge);
+              }
+            }
+            const totalCommentTarget =
+              comment.closest("li, div.comment-item") || comment;
+            if (totalCommentTarget.dataset.extFiltered) return;
+            totalCommentTarget.dataset.extFiltered = "true";
+
+            if (isBlindMode) {
+              const cacheHTML = totalCommentTarget.innerHTML;
+              totalCommentTarget.innerHTML = buildBlindWrapperHTML(
+                "댓글",
+                cacheHTML,
+              );
+              attachBlindToggleEvents(totalCommentTarget);
+            } else if (isBadgeMode) {
+              totalCommentTarget.style.backgroundColor = "#fff1f2";
+              totalCommentTarget.classList.add("ext-blocked-user-layout");
+            } else {
+              totalCommentTarget.remove();
+            }
+            return;
+          }
+
+          if (nicknameElement && currentMemberId && memos[currentMemberId]) {
+            if (
+              nicknameElement &&
+              !comment.querySelector(`.ext-badge-id-${currentMemberId}`)
+            ) {
+              const memoData = getMemoData(currentMemberId);
+              const badge = createMemoBadgeElement(
+                currentMemberId,
+                memoData.text,
+                memoData.style,
+              );
+              if (badge) nicknameElement.after(badge);
+            }
+          }
+        });
+
+        // ⑥ 본문 상단 툴바 필터 제어 구역
+        const titleToolbar = document.querySelector(".title-toolbar");
+        if (titleToolbar) {
+          const authorElement = titleToolbar.querySelector(
+            'a[class*="member_"]',
+          );
+          if (
+            authorElement &&
+            memos[authorElement.className.match(/member_(\d+)/)?.[1]]
+          ) {
+            const authorMemberId =
+              authorElement.className.match(/member_(\d+)/)?.[1];
+            if (
+              !authorElement.nextElementSibling?.classList.contains(
+                "ext-user-memo-badge",
+              )
+            ) {
+              const memoData = getMemoData(authorMemberId);
+              const badge = createMemoBadgeElement(
+                authorMemberId,
+                memoData.text,
+                memoData.style,
+              );
+              if (badge) authorElement.after(badge);
+            }
+          }
+        }
+
+        // ⑦ 개드립콘 처리 구역
+        document
+          .querySelectorAll("img.dogcon-clickable, img[data-dogcon-srl]")
+          .forEach((img) => {
             const fileSrl = img.getAttribute("data-dogcon-file-srl");
-            const title =
-              img.getAttribute("data-title") ||
-              img.getAttribute("title") ||
-              "개드립콘";
-            const alt = img.getAttribute("alt") || "콘";
             if (img.dataset.extProcessed) return;
             img.dataset.extProcessed = "true";
-            const isGroupBlocked = blockedDogconGroupIds.includes(srl);
-            const isSingleBlocked = blockedDogconIds.includes(fileSrl);
-            if (isGroupBlocked || isSingleBlocked) {
+            if (fileSrl && blockedDogconIds.includes(String(fileSrl))) {
               const blockDiv = document.createElement("div");
               blockDiv.className = "ext-dogcon-blocked";
-              blockDiv.innerHTML = `🚫 <span>${title} (${alt}) 차단됨</span>`;
+              blockDiv.innerHTML = `🚫 <span>차단된 개드립콘</span>`;
               img.parentNode.insertBefore(blockDiv, img);
               img.remove();
             }
           });
-
-          if (result.disableVote === true) {
-            document
-              .querySelectorAll("td.ed.voteNum.text-primary")
-              .forEach((td) => {
-                if (!td.dataset.extVoteProcessed) {
-                  td.dataset.extVoteProcessed = "true";
-                  td.innerHTML = '<i class="fas fa-baby"></i>';
-                }
-              });
-            document.querySelectorAll("i.far.fa-thumbs-up").forEach((icon) => {
-              if (!icon.dataset.extVoteProcessed) {
-                icon.dataset.extVoteProcessed = "true";
-                icon.className = "fas fa-baby";
-                const parent = icon.closest("span.text-primary");
-                if (
-                  parent?.nextElementSibling?.classList.contains("text-primary")
-                )
-                  parent.nextElementSibling.remove();
-              }
-            });
-          }
-          if (result.preventYoutubeAlgorithm === true) {
-            document
-              .querySelectorAll('iframe[src*="youtube.com/embed/"]')
-              .forEach((iframe) => {
-                if (!iframe.dataset.extYoutubeProcessed) {
-                  iframe.dataset.extYoutubeProcessed = "true";
-                  const src = iframe.getAttribute("src");
-                  if (src)
-                    iframe.setAttribute(
-                      "src",
-                      src.replace(
-                        "youtube.com/embed/",
-                        "youtube-nocookie.com/embed/",
-                      ),
-                    );
-                }
-              });
-          }
-          if (
-            !result.contentWidth ||
-            typeof result.contentWidth !== "string" ||
-            result.contentWidth.trim() === ""
-          ) {
-            document.querySelectorAll(".container").forEach((el) => {
-              el.style.maxWidth = "960px";
-            });
-          }
-          resolve();
-        },
-      );
-    });
-    Promise.all([minTimePromise, filterPromise]).then(() => {
-      removeLoadingOverlay();
-    });
+      },
+    );
   }
 
-  // 🔄 동적 노드 트리 관찰자 구동
   const popupObserver = new MutationObserver((mutationsList) => {
     for (const mutation of mutationsList) {
       if (mutation.type === "childList") {
@@ -905,7 +1011,7 @@
             if (hasNewDogcon || hasNewMemberLink) {
               setTimeout(() => {
                 attachBlindToggleEvents(document.body);
-                executeFilterWithMinTime();
+                detectBlockedListContext();
               }, 50);
             }
           }
@@ -926,9 +1032,9 @@
     document.readyState === "interactive" ||
     document.readyState === "complete"
   ) {
-    executeFilterWithMinTime();
+    detectBlockedListContext();
   } else {
-    document.addEventListener("DOMContentLoaded", executeFilterWithMinTime);
+    document.addEventListener("DOMContentLoaded", detectBlockedListContext);
   }
 
   window.addEventListener("load", removeLoadingOverlay);
