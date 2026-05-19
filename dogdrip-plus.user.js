@@ -1,17 +1,19 @@
 // ==UserScript==
-// @name         개드립 Plus+ 크롬 & 사파리 전천후 통합본
+// @name         개드립 Plus+ 사파리 전용 통합본
+// @namespace    https://dogdrip.net/
 // @version      1.9.0
-// @match        https://*.dogdrip.net/*
+// @match        *://*.dogdrip.net/*
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        unsafeWindow
 // @run-at       document-start
 // ==/UserScript==
 
 (function () {
   "use strict";
 
-  // 🛡️ [1단계: 하이브리드 환경 자동 감지 및 가교 적재]
-  // 사파리 유저스크립트 환경일 때만 가짜 chrome 스토리지를 생성하여 코드가 죽는 것을 방지합니다.
+  // 🛡️ [1단계: Userscripts 전용 하이브리드 환경 강제 동기화]
+  // 사파리 모바일 환경에서 크롬 스토리지 에러로 코드가 죽는 것을 완벽하게 방어합니다.
   const isExtensionEnv =
     typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id;
 
@@ -22,7 +24,7 @@
           get: function (keys, callback) {
             let result = {};
             keys.forEach((key) => {
-              // 템퍼몽키/Userscripts 환경의 순정 영구 스토리지 바인딩
+              // Userscripts 안전 저장소 API 바인딩
               result[key] =
                 typeof GM_getValue !== "undefined"
                   ? GM_getValue(key, key === "blockMethod" ? "badge" : [])
@@ -40,31 +42,30 @@
           },
         },
       },
-      runtime: { id: "mock-hybrid-env-id" },
+      runtime: { id: "safari-userscripts-hybrid-id" },
     };
   }
 
-  // 🎨 [2단계: 환경별 유동적 모바일 대시보드 인젝터]
-  // 확장프로그램 환경이 아닐 때만(즉, 모바일 사파리/타몽일 때만) 우하단 ⚙️ 플로팅 버튼을 그립니다.
+  // 🎨 [2단계: 사파리 톱니바퀴 UI 인젝터]
   function injectMobileUI() {
-    if (isExtensionEnv) return; // PC 크롬 확장프로그램일 때는 순정 popup.html을 쓰므로 톱니바퀴를 그리지 않고 즉시 탈출
+    if (isExtensionEnv) return; // PC 크롬 확장일 때는 실행 안 함
     if (!document.body || document.getElementById("ext-mobile-setup-trigger"))
       return false;
 
     const style = document.createElement("style");
     style.innerHTML = `
             #ext-mobile-setup-trigger {
-                position: fixed; bottom: 25px; right: 25px; z-index: 200000;
-                width: 50px; height: 50px; background: #3b82f6; color: #fff;
-                border-radius: 50%; display: flex; align-items: center; justify-content: center;
-                font-size: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.25); cursor: pointer;
-                user-select: none; -webkit-user-select: none;
+                position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 2147483647 !important;
+                width: 55px !important; height: 55px !important; background: #3b82f6 !important; color: #fff !important;
+                border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important;
+                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; cursor: pointer !important;
+                user-select: none !important; -webkit-user-select: none !important;
             }
             #ext-mobile-dashboard {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.5); z-index: 200001; display: none; align-items: center; justify-content: center;
+                position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important;
+                background: rgba(0,0,0,0.5) !important; z-index: 2147483647 !important; display: none !important; align-items: center !important; justify-content: center !important;
             }
-            .ext-mobile-content { background: #fff; width: 88%; max-width: 360px; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+            .ext-mobile-content { background: #fff !important; width: 88% !important; max-width: 360px !important; padding: 20px !important; border-radius: 16px !important; box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important; color: #111827 !important; }
         `;
     document.head.appendChild(style);
 
@@ -84,7 +85,9 @@
         `;
     document.body.appendChild(dashboardModal);
 
-    triggerBtn.addEventListener("click", () => {
+    triggerBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       dashboardModal.style.display = "flex";
     });
     dashboardModal
@@ -95,7 +98,7 @@
     return true;
   }
 
-  // 사파리 특유의 렌더링 시점 극복용 라이프사이클 가드
+  // 사파리 강제 로딩 타이밍 추적용 다중 가드
   if (document.body) {
     injectMobileUI();
   } else {
@@ -109,7 +112,7 @@
   }
 
   // =========================================================
-  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역 (app.js 소스 원본)]
+  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역 (기존 app.js 핵심 연산 원본)]
   // =========================================================
   const blockColor = "f43f5e";
   const grantColor = "16a34a";
@@ -237,7 +240,6 @@
     container.querySelectorAll(".ext-blind-container").forEach((wrapper) => {
       if (wrapper.dataset.bound) return;
       wrapper.dataset.bound = "true";
-
       const btn = wrapper.querySelector(".ext-blind-toggle-btn");
       const body = wrapper.querySelector(".ext-blind-body");
       if (!body || !btn) return;
