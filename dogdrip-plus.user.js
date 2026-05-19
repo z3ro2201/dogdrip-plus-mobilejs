@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.2
+// @version      1.1.3
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -1401,20 +1401,22 @@
           .querySelectorAll(".ext-tab-panel")
           .forEach((p) => p.classList.remove("active"));
         tab.classList.add("active");
-        document.getElementById(tab.dataset.tab)?.classList.add("active");
+        settingsPanel
+          .querySelector(`#${tab.dataset.tab}`)
+          ?.classList.add("active");
         loadPanelData(tab.dataset.tab);
       });
     });
 
     // 키워드 추가
-    document.getElementById("s-kw-add")?.addEventListener("click", () => {
-      const word = document.getElementById("s-kw-word").value.trim();
+    settingsPanel.querySelector("#s-kw-add")?.addEventListener("click", () => {
+      const word = settingsPanel.querySelector("#s-kw-word").value.trim();
       if (!word) {
         alert("키워드를 입력하세요.");
         return;
       }
-      const target = document.getElementById("s-kw-target").value;
-      const method = document.getElementById("s-kw-method").value;
+      const target = settingsPanel.querySelector("#s-kw-target").value;
+      const method = settingsPanel.querySelector("#s-kw-method").value;
       Store.get(["keywords"]).then((r) => {
         const list = r.keywords || [];
         if (list.some((x) => (x.word || x.keyword) === word)) {
@@ -1422,38 +1424,37 @@
           return;
         }
         list.push({
-          date: new Date()
-            .toLocaleDateString("ko-KR")
-            .replace(/\. /g, "/")
-            .replace(".", ""),
+          date: new Date().toISOString().slice(0, 10),
           word,
           method,
           target,
         });
         Store.set({ keywords: list }).then(() => {
-          document.getElementById("s-kw-word").value = "";
+          settingsPanel.querySelector("#s-kw-word").value = "";
           renderKeywordList();
         });
       });
     });
 
     // 백업
-    document.getElementById("s-backup")?.addEventListener("click", doBackup);
-    document
-      .getElementById("s-restore-btn")
+    settingsPanel
+      .querySelector("#s-backup")
+      ?.addEventListener("click", doBackup);
+    settingsPanel
+      .querySelector("#s-restore-btn")
       ?.addEventListener("click", () =>
-        document.getElementById("s-restore-file").click(),
+        settingsPanel.querySelector("#s-restore-file").click(),
       );
-    document
-      .getElementById("s-restore-file")
+    settingsPanel
+      .querySelector("#s-restore-file")
       ?.addEventListener("change", doRestore);
-    document
-      .getElementById("s-restore-pp-btn")
+    settingsPanel
+      .querySelector("#s-restore-pp-btn")
       ?.addEventListener("click", () =>
-        document.getElementById("s-restore-pp-file").click(),
+        settingsPanel.querySelector("#s-restore-pp-file").click(),
       );
-    document
-      .getElementById("s-restore-pp-file")
+    settingsPanel
+      .querySelector("#s-restore-pp-file")
       ?.addEventListener("change", doRestorePP);
   }
 
@@ -1474,6 +1475,8 @@
   function bindDisplayToggles() {
     if (_displayTogglesBound) return;
     _displayTogglesBound = true;
+
+    // 레이아웃 토글 — CSS 즉시 반영 (새로고침 불필요)
     const toggleMap = [
       ["s-hide-notice", "hideNotice"],
       ["s-hide-popular", "hidePopular"],
@@ -1483,23 +1486,30 @@
       ["s-no-yt", "preventYoutubeAlgorithm"],
     ];
     toggleMap.forEach(([elId, key]) => {
-      document.getElementById(elId)?.addEventListener("change", (e) => {
-        const val = e.target.checked;
-        Store.set({ [key]: val }).then(() => {
-          Store.get([
-            "hideNotice",
-            "hidePopular",
-            "hideSidebar",
-            "compactMode",
-            "disableVote",
-          ]).then(applyDisplayClasses);
-          console.log("[개드립Plus] 저장:", key, val);
+      settingsPanel
+        .querySelector(`#${elId}`)
+        ?.addEventListener("change", (e) => {
+          const val = e.target.checked;
+          Store.set({ [key]: val }).then(() => {
+            Store.get([
+              "hideNotice",
+              "hidePopular",
+              "hideSidebar",
+              "compactMode",
+              "disableVote",
+            ]).then(applyDisplayClasses);
+          });
         });
-      });
     });
+
+    // 차단방식 라디오 — 필터 재실행 필요하므로 저장 후 패널 닫고 reload
     ["s-bm-remove", "s-bm-blind", "s-bm-badge"].forEach((id) => {
-      document.getElementById(id)?.addEventListener("change", (e) => {
-        if (e.target.checked) Store.set({ blockMethod: e.target.value });
+      settingsPanel.querySelector(`#${id}`)?.addEventListener("change", (e) => {
+        if (!e.target.checked) return;
+        Store.set({ blockMethod: e.target.value }).then(() => {
+          closeSettingsPanel();
+          location.reload();
+        });
       });
     });
   }
