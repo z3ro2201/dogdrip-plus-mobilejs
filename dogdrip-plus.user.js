@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.0
+// @version      1.1.2
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -305,7 +305,36 @@
     .ext-backup-btn:active { background: #e2e8f0; }
     .ext-keyword-badge { cursor: pointer; }
     .ext-keyword-badge:active { background: #dbeafe; }
+    /* ── 레이아웃 제어 (html 클래스 기반) ── */
+    html.ext-hide-notice li.notice,
+    html.ext-hide-notice tr.notice { display: none !important; }
+
+    html.ext-hide-popular li.popular-item,
+    html.ext-hide-popular tr.popular-item { display: none !important; }
+
+    html.ext-hide-sidebar .clayerbox-right { display: none !important; }
+
+    html.ext-hide-compact .recent_wrap,
+    html.ext-hide-compact .favorite { display: none !important; }
+
+    html.ext-hide-compact .secontent,
+    html.ext-hide-compact .board-list,
+    html.ext-hide-compact .ed.board.container {
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    html.ext-hide-vote .wgtRv.ed_vote.visited { display: none !important; }
+
+    html[style*="--ext-custom-width"] .container {
+      width: var(--ext-custom-width) !important;
+      max-width: var(--ext-custom-width) !important;
+      min-width: var(--ext-custom-width) !important;
+      margin: 0 auto !important;
+    }
   `;
+
   document.documentElement.appendChild(style);
 
   /* =========================================================================
@@ -583,13 +612,22 @@
       const blockedUsers = result.blocked_users || [];
       const blockedDogcons = result.blockedDogcons || [];
       const blockedDogconGroups = result.blockedDogconGroups || [];
-      const isBlind = result.blockMethod === "blind";
-      const isBadge = result.blockMethod === "badge";
+      const blockMethod = result.blockMethod || "remove";
+      const isBlind = blockMethod === "blind";
+      const isBadge = blockMethod === "badge";
       const memos = result.userMemos || {};
 
       const blockedIds = blockedUsers
         .map((u) => String(u.member_num).trim())
         .filter(Boolean);
+      console.log(
+        "[개드립Plus] 필터 실행 — 차단유저:",
+        blockedIds.length,
+        "/ 키워드:",
+        filterKW.length,
+        "/ 방식:",
+        blockMethod,
+      );
       const blockedDogconIds = blockedDogcons.map((i) => i.id);
       const blockedDogconGroupIds = blockedDogconGroups.map((i) => i.id);
 
@@ -600,11 +638,7 @@
             "--ext-custom-width",
             result.contentWidth.trim(),
           );
-        if (result.hideNotice) html.classList.add("ext-hide-notice");
-        if (result.hidePopular) html.classList.add("ext-hide-popular");
-        if (result.hideSidebar) html.classList.add("ext-hide-sidebar");
-        if (result.compactMode) html.classList.add("ext-hide-compact");
-        if (result.disableVote) html.classList.add("ext-hide-vote");
+        applyDisplayClasses(result);
       }
 
       function handleUserEl(el, nicknameEl, memberId, shouldBlind, isPost) {
@@ -997,32 +1031,32 @@
     targetMemberIdToBlock = "";
   }
   function bindBlockModal() {
-    const reasonInput = document.getElementById("ext-block-reason");
+    const reasonInput = blockModalEl.querySelector("#ext-block-reason");
     reasonInput?.addEventListener("input", (e) => {
       e.target.value = e.target.value.replace(
         /[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9.,\s]/g,
         "",
       );
     });
-    document
-      .getElementById("ext-block-cancel")
+    blockModalEl
+      .querySelector("#ext-block-cancel")
       ?.addEventListener("click", closeBlockModal);
     blockModalEl.addEventListener("click", (e) => {
       if (e.target === blockModalEl) closeBlockModal();
     });
-    document
-      .getElementById("ext-block-confirm")
+    blockModalEl
+      .querySelector("#ext-block-confirm")
       ?.addEventListener("click", () => {
         if (!targetNicknameToBlock || !targetMemberIdToBlock) {
           closeBlockModal();
           return;
         }
-        const reason = document.getElementById("ext-block-reason").value.trim();
+        const reason = blockModalEl
+          .querySelector("#ext-block-reason")
+          .value.trim();
+        const today = new Date().toISOString().slice(0, 10);
         const newUser = {
-          date: new Date()
-            .toLocaleDateString("ko-KR")
-            .replace(/\. /g, "/")
-            .replace(".", ""),
+          date: today,
           member_num: String(targetMemberIdToBlock).trim(),
           memo: reason,
         };
@@ -1035,10 +1069,20 @@
           ) {
             list.push(newUser);
             Store.set({ blocked_users: list }).then(() => {
+              console.log(
+                "[개드립Plus] 차단 저장 완료:",
+                newUser,
+                "/ 총",
+                list.length,
+                "명",
+              );
               closeBlockModal();
               location.reload();
             });
-          } else closeBlockModal();
+          } else {
+            alert("이미 차단된 사용자입니다.");
+            closeBlockModal();
+          }
         });
       });
   }
@@ -1107,40 +1151,40 @@
   }
 
   function bindMemoModal() {
-    document
-      .getElementById("ext-memo-cancel")
+    memoModalEl
+      .querySelector("#ext-memo-cancel")
       ?.addEventListener("click", closeMemoModal);
     memoModalEl.addEventListener("click", (e) => {
       if (e.target === memoModalEl) closeMemoModal();
     });
-    const inp = document.getElementById("ext-memo-input");
+    const inp = memoModalEl.querySelector("#ext-memo-input");
+    const confirmBtn = memoModalEl.querySelector("#ext-memo-confirm");
     inp?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        document.getElementById("ext-memo-confirm").click();
+        confirmBtn?.click();
       }
     });
-    document
-      .getElementById("ext-memo-confirm")
-      ?.addEventListener("click", () => {
-        if (!targetMemoMemberId) {
+    confirmBtn?.addEventListener("click", () => {
+      if (!targetMemoMemberId) {
+        closeMemoModal();
+        return;
+      }
+      const text = memoModalEl.querySelector("#ext-memo-input").value.trim();
+      Store.get(["userMemos"]).then((r) => {
+        const memos = r.userMemos || {};
+        if (text)
+          memos[targetMemoMemberId] = `${text}:${selectedMemoColorStyle}`;
+        else delete memos[targetMemoMemberId];
+        Store.set({ userMemos: memos }).then(() => {
+          console.log("[개드립Plus] 메모 저장 완료:", targetMemoMemberId, text);
           closeMemoModal();
-          return;
-        }
-        const text = document.getElementById("ext-memo-input").value.trim();
-        Store.get(["userMemos"]).then((r) => {
-          const memos = r.userMemos || {};
-          if (text)
-            memos[targetMemoMemberId] = `${text}:${selectedMemoColorStyle}`;
-          else delete memos[targetMemoMemberId];
-          Store.set({ userMemos: memos }).then(() => {
-            closeMemoModal();
-            location.reload();
-          });
+          location.reload();
         });
       });
-    document
-      .getElementById("ext-memo-delete")
+    });
+    memoModalEl
+      .querySelector("#ext-memo-delete")
       ?.addEventListener("click", () => {
         if (!targetMemoMemberId) {
           closeMemoModal();
@@ -1213,7 +1257,16 @@
           const list = (r.blocked_users || []).filter(
             (x) => String(x.member_num) !== memberId,
           );
-          Store.set({ blocked_users: list }).then(() => location.reload());
+          Store.set({ blocked_users: list }).then(() => {
+            console.log(
+              "[개드립Plus] 차단 해제:",
+              memberId,
+              "/ 남은 차단:",
+              list.length,
+              "명",
+            );
+            location.reload();
+          });
         });
       });
     } else {
@@ -1431,8 +1484,16 @@
     ];
     toggleMap.forEach(([elId, key]) => {
       document.getElementById(elId)?.addEventListener("change", (e) => {
-        Store.set({ [key]: e.target.checked }).then(() => {
-          console.log("[개드립Plus] 저장:", key, e.target.checked);
+        const val = e.target.checked;
+        Store.set({ [key]: val }).then(() => {
+          Store.get([
+            "hideNotice",
+            "hidePopular",
+            "hideSidebar",
+            "compactMode",
+            "disableVote",
+          ]).then(applyDisplayClasses);
+          console.log("[개드립Plus] 저장:", key, val);
         });
       });
     });
@@ -1633,6 +1694,15 @@
         c.appendChild(badge);
       });
     });
+  }
+
+  function applyDisplayClasses(r) {
+    const html = document.documentElement;
+    html.classList.toggle("ext-hide-notice", !!r.hideNotice);
+    html.classList.toggle("ext-hide-popular", !!r.hidePopular);
+    html.classList.toggle("ext-hide-sidebar", !!r.hideSidebar);
+    html.classList.toggle("ext-hide-compact", !!r.compactMode);
+    html.classList.toggle("ext-hide-vote", !!r.disableVote);
   }
 
   function loadDisplaySettings() {
