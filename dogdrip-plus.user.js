@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+
 // @namespace    https://dogdrip.net/
-// @version      2.0.2
+// @version      2.0.3
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
@@ -476,6 +476,7 @@
     });
   }
 
+  // [🛡️ 안전 필터 검사 구역]
   function createMemoBadgeElement(memberId, memoText, colorStyle) {
     if (!memoText) return null;
     const badge = document.createElement("span");
@@ -556,7 +557,12 @@
 
           const htmlEl = document.documentElement;
           if (htmlEl) {
-            if (result.contentWidth && result.contentWidth.trim() !== "") {
+            // 🛡️ [핵심 교정]: 가드 조건을 추가하여 문자열이 아닐 때 터지는 trim 부조화를 원천 봉쇄합니다.
+            if (
+              result.contentWidth &&
+              typeof result.contentWidth === "string" &&
+              result.contentWidth.trim() !== ""
+            ) {
               htmlEl.style.setProperty(
                 "--ext-custom-width",
                 result.contentWidth.trim(),
@@ -833,6 +839,7 @@
               } else {
                 row.remove();
               }
+              // 🛡️ [핵심 교정]: 잘못 표기되어 에러를 일으켰던 memos 객체 참조 구문을 currentMemberId로 되돌립니다.
             } else if (currentMemberId && memos[currentMemberId]) {
               if (
                 authorElement &&
@@ -1116,7 +1123,14 @@
                 }
               });
           }
-          if (!result.contentWidth || result.contentWidth.trim() === "") {
+          // 🛡️ [핵심 교정]: 가람막 방어용 문자열 타입 가드 2차 확인
+          if (
+            result.contentWidth &&
+            typeof result.contentWidth === "string" &&
+            result.contentWidth.trim() !== ""
+          ) {
+            // 이미 상단에서 주입 완료
+          } else {
             document.querySelectorAll(".container").forEach((el) => {
               el.style.maxWidth = "960px";
             });
@@ -1130,71 +1144,7 @@
     });
   }
 
-  // 🛡️ [4단계: 순정 팝업 메뉴 감지 및 인터셉트 엔진]
-  function handlePopupMenuDetected(popupElement) {
-    const currentDisplay = window.getComputedStyle(popupElement).display;
-    if (currentDisplay === "none") return;
-    if (lastClickedUserData.memberId) {
-      chrome.storage.local.get(["blocked_users", "userMemos"], (result) => {
-        if (chrome.runtime?.lastError || !chrome.runtime || !chrome.runtime.id)
-          return;
-        const list = Array.isArray(result.blocked_users)
-          ? result.blocked_users
-          : [];
-        const memos = result.userMemos || {};
-        const isAlreadyBlocked = list.some(
-          (item) =>
-            String(item.member_num) === String(lastClickedUserData.memberId),
-        );
-        const currentMemoData = memos[lastClickedUserData.memberId] || "";
-        insertMemberMenu(
-          lastClickedUserData.memberId,
-          lastClickedUserData.nickname,
-          isAlreadyBlocked,
-          currentMemoData,
-        );
-      });
-    }
-  }
-
-  function insertMemberMenu(
-    memberId,
-    nickname,
-    isAlreadyBlocked,
-    currentMemoData,
-  ) {
-    const popupMenuParentEl = document.getElementById("popup_menu_area");
-    if (!popupMenuParentEl) return;
-    const popupMenuEl = popupMenuParentEl.querySelector("ul");
-    if (!popupMenuEl) return;
-    popupMenuEl
-      .querySelectorAll(
-        ".ext-inserted-member-block, .ext-inserted-member-memo-link",
-      )
-      .forEach((el) => el.remove());
-    let pureMemoText = currentMemoData.includes(":")
-      ? currentMemoData.split(":")[0]
-      : currentMemoData;
-    const memoLi = document.createElement("li");
-    memoLi.className = "ext-inserted-member-memo-link";
-    const memoSuffix =
-      pureMemoText !== ""
-        ? ` <span style="font-weight:normal; font-size:11px; color:#64748b;">(${pureMemoText.length > 8 ? pureMemoText.slice(0, 8) + "..." : pureMemoText})</span>`
-        : "";
-    memoLi.innerHTML = `<a href="#" style="color: #0284c7; font-weight: bold;">메모${memoSuffix}</a>`;
-
-    const blockItem = document.createElement("li");
-    blockItem.className = "ext-inserted-member-block";
-    if (isAlreadyBlocked) {
-      blockItem.innerHTML = `<a href="#" style="color: #16a34a; font-weight: bold;">차단 해제</a>`;
-    } else {
-      blockItem.innerHTML = `<a href="#" style="color: #f43f5e; font-weight: bold;">차단</a>`;
-    }
-    popupMenuEl.appendChild(memoLi);
-    popupMenuEl.appendChild(blockItem);
-  }
-
-  // 🛡️ 드롭다운 항목 위임 가로채기 파이프라인
+  // 🛡️ [사파리 위임 파이프라인]
   document.body.addEventListener("click", (e) => {
     const item = e.target.closest("a");
     if (!item) return;
