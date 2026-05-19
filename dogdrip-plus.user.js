@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         개드립 Plus+
 // @namespace    https://dogdrip.net/
-// @version      2.4.0
+// @version      2.4.1
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://cdn.jsdelivr.net/gh/z3ro2201/dogdrip-plus-mobilejs@main/dogdrip-plus.user.js
 // @updateURL    https://cdn.jsdelivr.net/gh/z3ro2201/dogdrip-plus-mobilejs@main/dogdrip-plus.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        unsafeWindow
-// @run-at       document-start
+// @run-at       document-end
 // ==/UserScript==
 
 (function () {
@@ -68,8 +68,11 @@
 
   // 🎨 [2단계: 모바일 5대 기능 통합 제어 대시보드 뷰어]
   function injectMobileUIAndStyles() {
-    if (isExtensionEnv) return;
-    if (document.getElementById("ext-mobile-dashboard-style")) return;
+    if (isExtensionEnv) return false;
+    if (document.getElementById("ext-mobile-dashboard-style")) return false;
+
+    // 도화지 가드: body가 없으면 이탈하여 터짐을 사전에 방지
+    if (!document.body) return false;
 
     const style = document.createElement("style");
     style.id = "ext-mobile-dashboard-style";
@@ -102,8 +105,6 @@
             .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; padding: 2px 6px !important; font-size: 11px !important; user-select: none; }
             .ext-mob-radio-group { display: flex !important; gap: 12px !important; margin-bottom: 4px !important; }
             .ext-mob-radio-label { font-size: 12px !important; color: #4b5563 !important; display: flex !important; align-items: center !important; gap: 4px !important; cursor: pointer; }
-            
-            /* 추가 입력 폼 레이아웃 */
             .ext-mob-form-group { display: flex !important; gap: 6px !important; margin-top: 6px !important; }
             .ext-mob-input-box { flex: 1 !important; padding: 7px 10px !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important; font-size: 12px !important; color: #000 !important; background: #fff !important; box-sizing: border-box !important; }
             .ext-mob-inline-btn { padding: 0 12px !important; background: #3b82f6 !important; color: #fff !important; border: none !important; border-radius: 6px !important; font-size: 12px !important; font-weight: 600 !important; }
@@ -125,24 +126,20 @@
                     <label class="ext-mob-radio-label"><input type="radio" name="mobBlockRadio" value="blind"> 가림막 접기</label>
                     <label class="ext-mob-radio-label"><input type="radio" name="mobBlockRadio" value="badge"> 배경/배지만 표시</label>
                 </div>
-
                 <hr style="border:0; border-top:1px solid #f3f4f6; margin:12px 0;">
-
                 <div class="ext-mob-section-title">📝 키워드 차단 목록</div>
                 <ul class="ext-mob-kv-list" id="ext-mob-kw-container"></ul>
                 <div class="ext-mob-form-group">
-                    <input type="text" id="ext-input-kw" class="ext-mob-input-box" placeholder="차단할 단어 입력...">
+                    <input type="text" id="ext-mob-kw" class="ext-mob-input-box" placeholder="차단할 단어 입력...">
                     <button class="ext-mob-inline-btn" data-action="add-kw">추가</button>
                 </div>
-
                 <div class="ext-mob-section-title">🚫 차단 사용자 목록</div>
                 <ul class="ext-mob-kv-list" id="ext-mob-users-container"></ul>
                 <div class="ext-mob-form-group">
-                    <input type="number" id="ext-input-user-id" class="ext-mob-input-box" placeholder="회원번호 입력..." style="max-width:110px;">
+                    <input type="number" id="ext-input-user-id" class="ext-mob-input-box" placeholder="회원번호..." style="max-width:110px;">
                     <input type="text" id="ext-input-user-reason" class="ext-mob-input-box" placeholder="차단 사유(선택)...">
                     <button class="ext-mob-inline-btn" data-action="add-user">차단</button>
                 </div>
-
                 <div class="ext-mob-section-title">✏️ 등록된 유저 메모 목록</div>
                 <ul class="ext-mob-kv-list" id="ext-mob-memos-container"></ul>
                 <div class="ext-mob-form-group">
@@ -150,20 +147,17 @@
                     <input type="text" id="ext-input-memo-text" class="ext-mob-input-box" placeholder="메모 내용 입력...">
                     <button class="ext-mob-inline-btn" data-action="add-memo">저장</button>
                 </div>
-
                 <div class="ext-mob-section-title">🖼️ 차단 개드립콘 목록</div>
                 <ul class="ext-mob-kv-list" id="ext-mob-dogcons-container"></ul>
                 <div class="ext-mob-form-group">
                     <input type="number" id="ext-input-dc-id" class="ext-mob-input-box" placeholder="개드립콘 고유 ID 번호 입력...">
                     <button class="ext-mob-inline-btn" data-action="add-dc">차단</button>
                 </div>
-
                 <button style="width:100% !important; font-weight:700 !important; padding:11px !important; margin-top:20px; background:#3b82f6; color:#fff; border:none; border-radius:10px; font-size:13px;" id="ext-mobile-dashboard-close">설정 저장 및 창 닫기</button>
             </div>
         `;
     document.body.appendChild(dashboardOverlay);
 
-    // 🔄 데이터 동기화 및 실시간 리스트 드로잉 함수
     function refreshMobileDashboardUI() {
       chrome.storage.local.get(
         [
@@ -187,62 +181,64 @@
           );
           if (targetRadio) targetRadio.checked = true;
 
-          // 1. 키워드
           const kwBox = document.getElementById("ext-mob-kw-container");
-          kwBox.innerHTML = kws.length
-            ? ""
-            : "<li>등록된 키워드가 없습니다.</li>";
-          kws.forEach((kw, idx) => {
-            const li = document.createElement("li");
-            li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-type="kw" data-id="${idx}">제거</span>`;
-            kwBox.appendChild(li);
-          });
+          if (kwBox) {
+            kwBox.innerHTML = kws.length
+              ? ""
+              : "<li>등록된 키워드가 없습니다.</li>";
+            kws.forEach((kw, idx) => {
+              const li = document.createElement("li");
+              li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-type="kw" data-id="${idx}">제거</span>`;
+              kwBox.appendChild(li);
+            });
+          }
 
-          // 2. 사용자 차단
           const userBox = document.getElementById("ext-mob-users-container");
-          userBox.innerHTML = users.length
-            ? ""
-            : "<li>차단된 사용자가 없습니다.</li>";
-          users.forEach((u) => {
-            const li = document.createElement("li");
-            li.innerHTML = `<span>회원: ${u.member_num} ${u.memo ? `(${u.memo})` : ""}</span><span class="ext-mob-kv-del" data-type="user" data-id="${u.member_num}">해제</span>`;
-            userBox.appendChild(li);
-          });
+          if (userBox) {
+            userBox.innerHTML = users.length
+              ? ""
+              : "<li>차단된 사용자가 없습니다.</li>";
+            users.forEach((u) => {
+              const li = document.createElement("li");
+              li.innerHTML = `<span>회원: ${u.member_num} ${u.memo ? `(${u.memo})` : ""}</span><span class="ext-mob-kv-del" data-type="user" data-id="${u.member_num}">해제</span>`;
+              userBox.appendChild(li);
+            });
+          }
 
-          // 3. 유저 메모
           const memoBox = document.getElementById("ext-mob-memos-container");
-          const memoKeys = Object.keys(memos);
-          memoBox.innerHTML = memoKeys.length
-            ? ""
-            : "<li>등록된 메모가 없습니다.</li>";
-          memoKeys.forEach((mid) => {
-            let text = memos[mid];
-            if (text.includes(":")) text = text.split(":")[0];
-            const li = document.createElement("li");
-            li.innerHTML = `<span>회원 ${mid}: ${text}</span><span class="ext-mob-kv-del" data-type="memo" data-id="${mid}">삭제</span>`;
-            memoBox.appendChild(li);
-          });
+          if (memoBox) {
+            const memoKeys = Object.keys(memos);
+            memoBox.innerHTML = memoKeys.length
+              ? ""
+              : "<li>등록된 메모가 없습니다.</li>";
+            memoKeys.forEach((mid) => {
+              let text = memos[mid];
+              if (text.includes(":")) text = text.split(":")[0];
+              const li = document.createElement("li");
+              li.innerHTML = `<span>회원 ${mid}: ${text}</span><span class="ext-mob-kv-del" data-type="memo" data-id="${mid}">삭제</span>`;
+              memoBox.appendChild(li);
+            });
+          }
 
-          // 4. 개드립콘
           const dcBox = document.getElementById("ext-mob-dogcons-container");
-          dcBox.innerHTML = dogcons.length
-            ? ""
-            : "<li>차단된 개드립콘이 없습니다.</li>";
-          dogcons.forEach((dc) => {
-            const li = document.createElement("li");
-            li.innerHTML = `<span>콘 ID: ${dc.id}</span><span class="ext-mob-kv-del" data-type="dc" data-id="${dc.id}">해제</span>`;
-            dcBox.appendChild(li);
-          });
+          if (dcBox) {
+            dcBox.innerHTML = dogcons.length
+              ? ""
+              : "<li>차단된 개드립콘이 없습니다.</li>";
+            dogcons.forEach((dc) => {
+              const li = document.createElement("li");
+              li.innerHTML = `<span>콘 ID: ${dc.id}</span><span class="ext-mob-kv-del" data-type="dc" data-id="${dc.id}">해제</span>`;
+              dcBox.appendChild(li);
+            });
+          }
         },
       );
     }
 
-    // 🎯 [사파리 단일 터치 통제소]: 위임식 리스너 통합으로 먹통 버그 원천 봉쇄
     document.body.addEventListener("click", (e) => {
       const target = e.target;
       if (!target) return;
 
-      // 대시보드 열기
       if (target.id === "ext-mobile-setup-trigger") {
         e.preventDefault();
         e.stopPropagation();
@@ -250,7 +246,6 @@
         dashboardOverlay.style.display = "flex";
       }
 
-      // [실시간 데이터 삭제 제어 분기]
       if (target.classList.contains("ext-mob-kv-del")) {
         e.preventDefault();
         e.stopPropagation();
@@ -300,7 +295,6 @@
         );
       }
 
-      // [실시간 수동 추가 폼 제어 분기]
       if (target.classList.contains("ext-mob-inline-btn")) {
         e.preventDefault();
         e.stopPropagation();
@@ -309,9 +303,8 @@
         chrome.storage.local.get(
           ["keywords", "blocked_users", "userMemos", "blockedDogcons"],
           (res) => {
-            // 키워드 추가
             if (action === "add-kw") {
-              const input = document.getElementById("ext-input-kw");
+              const input = document.getElementById("ext-mob-kw");
               const val = input ? input.value.trim() : "";
               if (val) {
                 let list = Array.isArray(res.keywords) ? res.keywords : [];
@@ -322,7 +315,6 @@
                 });
               }
             }
-            // 사용자 차단 추가
             if (action === "add-user") {
               const inputId = document.getElementById("ext-input-user-id");
               const inputReason = document.getElementById(
@@ -350,7 +342,6 @@
                 });
               }
             }
-            // 메모 추가
             if (action === "add-memo") {
               const inputId = document.getElementById("ext-input-memo-id");
               const inputText = document.getElementById("ext-input-memo-text");
@@ -358,7 +349,7 @@
               const text = inputText ? inputText.value.trim() : "";
               if (mid && text) {
                 let memos = res.userMemos || {};
-                memos[mid] = `${text}:blue`; // 기본 파란색 배지 지정
+                memos[mid] = `${text}:blue`;
                 chrome.storage.local.set({ userMemos: memos }, () => {
                   if (inputId) inputId.value = "";
                   if (inputText) inputText.value = "";
@@ -366,33 +357,26 @@
                 });
               }
             }
-            // 개드립콘 차단 추가
             if (action === "add-dc") {
               const input = document.getElementById("ext-input-dc-id");
               const dcId = input ? input.value.trim() : "";
               if (dcId) {
-                let list = Array.isArray(res.blocked_dogcons)
-                  ? res.blocked_dogcons
-                  : Array.isArray(res.blockedDogcons)
-                    ? res.blockedDogcons
-                    : [];
+                let list = Array.isArray(res.blockedDogcons)
+                  ? res.blockedDogcons
+                  : [];
                 if (!list.some((d) => String(d.id) === String(dcId))) {
                   list.push({ id: dcId, name: `콘 ${dcId}` });
                 }
-                chrome.storage.local.set(
-                  { blockedDogcons: list, blocked_dogcons: list },
-                  () => {
-                    input.value = "";
-                    refreshMobileDashboardUI();
-                  },
-                );
+                chrome.storage.local.set({ blockedDogcons: list }, () => {
+                  input.value = "";
+                  refreshMobileDashboardUI();
+                });
               }
             }
           },
         );
       }
 
-      // 대시보드 완료 닫기
       if (target.id === "ext-mobile-dashboard-close") {
         e.preventDefault();
         e.stopPropagation();
@@ -406,19 +390,20 @@
         });
       }
     });
+
+    return true;
   }
 
+  // ⚡ [사파리 핵심 가드 교정]: 다중 수명 주기 훅 결합
   if (document.body) {
     injectMobileUIAndStyles();
   } else {
     document.addEventListener("DOMContentLoaded", injectMobileUIAndStyles);
-    const bodyObserver = new MutationObserver(() => {
-      if (document.body) {
-        if (injectMobileUIAndStyles()) bodyObserver.disconnect();
-      }
-    });
-    bodyObserver.observe(document, { childList: true, subtree: true });
   }
+  // 사파리 특유의 락을 부수기 위한 이중 보험 지연 가동장치
+  setTimeout(() => {
+    injectMobileUIAndStyles();
+  }, 300);
 
   // =========================================================
   // 📦 [3단계: 순정 개드립 코어 필터 백엔드 엔진 구역]
@@ -530,7 +515,6 @@
         "keywords",
         "blocked_users",
         "blockedDogcons",
-        "blockedDogconGroups",
         "blockMethod",
         "userMemos",
         "contentWidth",
@@ -551,9 +535,7 @@
           : [];
         const blockedDogcons = Array.isArray(result.blockedDogcons)
           ? result.blockedDogcons
-          : Array.isArray(result.blocked_dogcons)
-            ? result.blocked_dogcons
-            : [];
+          : [];
         const isBlindMode = result.blockMethod === "blind";
         const isBadgeMode = result.blockMethod === "badge";
         const memos = result.userMemos || {};
