@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.0.1
+// @version      1.1.0
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -374,14 +374,9 @@
 
       <!-- 사용자 차단 -->
       <div class="ext-tab-panel active" id="tab-block-user">
-        <p class="ext-section-label">회원번호로 차단 추가</p>
-        <div class="ext-input-row">
-          <input id="s-block-id" type="text" placeholder="회원 번호 (숫자)" inputmode="numeric" />
-          <input id="s-block-reason" type="text" placeholder="사유 (선택)" />
-          <button id="s-block-add">추가</button>
-        </div>
-        <p class="ext-section-label">차단 목록</p>
+        <p class="ext-section-label">차단 목록 <span id="s-block-count" style="font-weight:normal;color:#94a3b8;"></span></p>
         <div class="ext-badge-list" id="s-block-list"></div>
+        <p style="margin-top:12px;font-size:12px;color:#94a3b8;">닉네임 팝업 메뉴 → '차단'으로 추가할 수 있습니다.</p>
       </div>
 
       <!-- 키워드 차단 -->
@@ -1358,36 +1353,6 @@
       });
     });
 
-    // 사용자 차단 추가
-    document.getElementById("s-block-add")?.addEventListener("click", () => {
-      const id = document.getElementById("s-block-id").value.trim();
-      const reason = document.getElementById("s-block-reason").value.trim();
-      if (!id || !/^\d+$/.test(id)) {
-        alert("회원 번호(숫자)를 입력하세요.");
-        return;
-      }
-      Store.get(["blocked_users"]).then((r) => {
-        const list = r.blocked_users || [];
-        if (list.some((x) => String(x.member_num) === id)) {
-          alert("이미 차단된 사용자입니다.");
-          return;
-        }
-        list.push({
-          date: new Date()
-            .toLocaleDateString("ko-KR")
-            .replace(/\. /g, "/")
-            .replace(".", ""),
-          member_num: id,
-          memo: reason,
-        });
-        Store.set({ blocked_users: list }).then(() => {
-          document.getElementById("s-block-id").value = "";
-          document.getElementById("s-block-reason").value = "";
-          renderBlockList();
-        });
-      });
-    });
-
     // 키워드 추가
     document.getElementById("s-kw-add")?.addEventListener("click", () => {
       const word = document.getElementById("s-kw-word").value.trim();
@@ -1439,9 +1404,14 @@
       ?.addEventListener("change", doRestorePP);
   }
 
+  let _savedScrollY = 0;
   function openSettingsPanel() {
+    _savedScrollY = window.scrollY;
+    document.body.style.cssText +=
+      ";overflow:hidden;position:fixed;top:-" +
+      _savedScrollY +
+      "px;left:0;right:0;";
     settingsPanel.classList.add("show");
-    document.body.style.overflow = "hidden";
     loadPanelData("tab-block-user");
     loadDisplaySettings();
     bindDisplayToggles();
@@ -1475,6 +1445,11 @@
   function closeSettingsPanel() {
     settingsPanel.classList.remove("show");
     document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    window.scrollTo(0, _savedScrollY);
   }
 
   function loadPanelData(tabId) {
@@ -1503,6 +1478,9 @@
       const container = document.getElementById("s-block-list");
       if (!container) return;
       container.innerHTML = "";
+      const countEl = document.getElementById("s-block-count");
+      if (countEl)
+        countEl.textContent = list.length ? `(${list.length}명)` : "";
       if (!list.length) {
         container.innerHTML =
           '<span class="ext-empty-msg">차단된 사용자가 없습니다.</span>';
@@ -1516,6 +1494,7 @@
         del.className = "ext-badge-del";
         del.textContent = "×";
         del.addEventListener("click", () => {
+          if (!confirm(`${u.member_num} 차단을 해제할까요?`)) return;
           Store.get(["blocked_users"]).then((r2) => {
             const l2 = (r2.blocked_users || []).filter(
               (x) => x.member_num !== u.member_num,
