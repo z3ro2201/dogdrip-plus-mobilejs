@@ -74,7 +74,6 @@
     const style = document.createElement("style");
     style.id = "ext-mobile-dashboard-style";
     style.innerHTML = `
-            /* 사파리 클릭 이벤트 누수 방지용 커서 및 터치 액션 강제 지정 */
             #ext-mobile-setup-trigger, .ext-mob-btn, .ext-mob-kv-del, #ext-mobile-dashboard-close {
                 cursor: pointer !important;
                 touch-action: manipulation !important;
@@ -557,10 +556,10 @@
 
           const htmlEl = document.documentElement;
           if (htmlEl) {
-            // 🛡️ [핵심 교정]: trim() 호출 전 문자열 존재 유무를 먼저 검증하여 무결성을 확보합니다.
+            // 🛡️ [오타 보정 완료]: 지연을 발생시키던 trim 구문에 () 배치 완료
             if (
               result.contentWidth &&
-              typeof result.contentWidth === "string" &&
+              typeof result.contentWidth.trim === "function" &&
               result.contentWidth.trim() !== ""
             ) {
               htmlEl.style.setProperty(
@@ -840,7 +839,7 @@
                 row.remove();
               }
             } else if (currentMemberId && memos[currentMemberId]) {
-              // 🛡️ [오타 완치] memos[result.userMemos] 오류 영구 해결
+              // 🛡️ [참조 오류 해결]: memos[result.userMemos] 격파 완비
               if (
                 authorElement &&
                 !row.querySelector(`.ext-badge-id-${currentMemberId}`)
@@ -1123,11 +1122,7 @@
                 }
               });
           }
-          if (
-            !result.contentWidth ||
-            result.contentWidth.trim === "" ||
-            typeof result.contentWidth !== "string"
-          ) {
+          if (!result.contentWidth || result.contentWidth.trim() === "") {
             document.querySelectorAll(".container").forEach((el) => {
               el.style.maxWidth = "960px";
             });
@@ -1141,7 +1136,71 @@
     });
   }
 
-  // 🛡️ [사파리 수동 모달 가로채기 파이프라인]
+  // 🛡️ [🔎 함수 선언부 생환 완료]: 실종되어 ReferenceError의 만악의 근원이었던 핵심 관제소 복직 완료!
+  function handlePopupMenuDetected(popupElement) {
+    const currentDisplay = window.getComputedStyle(popupElement).display;
+    if (currentDisplay === "none") return;
+    if (lastClickedUserData.memberId) {
+      chrome.storage.local.get(["blocked_users", "userMemos"], (result) => {
+        if (chrome.runtime?.lastError || !chrome.runtime || !chrome.runtime.id)
+          return;
+        const list = Array.isArray(result.blocked_users)
+          ? result.blocked_users
+          : [];
+        const memos = result.userMemos || {};
+        const isAlreadyBlocked = list.some(
+          (item) =>
+            String(item.member_num) === String(lastClickedUserData.memberId),
+        );
+        const currentMemoData = memos[lastClickedUserData.memberId] || "";
+        insertMemberMenu(
+          lastClickedUserData.memberId,
+          lastClickedUserData.nickname,
+          isAlreadyBlocked,
+          currentMemoData,
+        );
+      });
+    }
+  }
+
+  function insertMemberMenu(
+    memberId,
+    nickname,
+    isAlreadyBlocked,
+    currentMemoData,
+  ) {
+    const popupMenuParentEl = document.getElementById("popup_menu_area");
+    if (!popupMenuParentEl) return;
+    const popupMenuEl = popupMenuParentEl.querySelector("ul");
+    if (!popupMenuEl) return;
+    popupMenuEl
+      .querySelectorAll(
+        ".ext-inserted-member-block, .ext-inserted-member-memo-link",
+      )
+      .forEach((el) => el.remove());
+    let pureMemoText = currentMemoData.includes(":")
+      ? currentMemoData.split(":")[0]
+      : currentMemoData;
+    const memoLi = document.createElement("li");
+    memoLi.className = "ext-inserted-member-memo-link";
+    const memoSuffix =
+      pureMemoText !== ""
+        ? ` <span style="font-weight:normal; font-size:11px; color:#64748b;">(${pureMemoText.length > 8 ? pureMemoText.slice(0, 8) + "..." : pureMemoText})</span>`
+        : "";
+    memoLi.innerHTML = `<a href="#" style="color: #0284c7; font-weight: bold;">메모${memoSuffix}</a>`;
+
+    const blockItem = document.createElement("li");
+    blockItem.className = "ext-inserted-member-block";
+    if (isAlreadyBlocked) {
+      blockItem.innerHTML = `<a href="#" style="color: #${grantColor}; font-weight: bold;">차단 해제</a>`;
+    } else {
+      blockItem.innerHTML = `<a href="#" style="color: #${blockColor}; font-weight: bold;">차단</a>`;
+    }
+    popupMenuEl.appendChild(memoLi);
+    popupMenuEl.appendChild(blockItem);
+  }
+
+  // 🛡️ [위임 연동 가드]: 닉네임 박스 서브 메뉴 연동
   document.body.addEventListener("click", (e) => {
     const item = e.target.closest("a");
     if (!item) return;
