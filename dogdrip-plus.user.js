@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         개드립 Plus+ 사파리 전용 통합본
+// @name         개드립 Plus+ 크롬 & 사파리 전천후 마스터 통합본
 // @namespace    https://dogdrip.net/
-// @version      1.9.0
+// @version      1.9.5
 // @match        *://*.dogdrip.net/*
 // @grant        GM_setValue
 // @grant        GM_getValue
@@ -12,8 +12,7 @@
 (function () {
   "use strict";
 
-  // 🛡️ [1단계: Userscripts 전용 하이브리드 환경 강제 동기화]
-  // 사파리 모바일 환경에서 크롬 스토리지 에러로 코드가 죽는 것을 완벽하게 방어합니다.
+  // 🛡️ [1단계: 하이브리드 환경 감지 및 데이터 가교]
   const isExtensionEnv =
     typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.id;
 
@@ -24,18 +23,37 @@
           get: function (keys, callback) {
             let result = {};
             keys.forEach((key) => {
-              // Userscripts 안전 저장소 API 바인딩
-              result[key] =
-                typeof GM_getValue !== "undefined"
-                  ? GM_getValue(key, key === "blockMethod" ? "badge" : [])
-                  : [];
+              let defaultVal = [];
+              if (key === "blockMethod") defaultVal = "badge";
+              if (key === "userMemos" || key === "keywords") defaultVal = {};
+              if (Array.isArray(defaultVal)) {
+                result[key] =
+                  typeof GM_getValue !== "undefined"
+                    ? GM_getValue(key, defaultVal)
+                    : defaultVal;
+              } else {
+                // JSON 객체 안전 변환 가드
+                let raw =
+                  typeof GM_getValue !== "undefined"
+                    ? GM_getValue(key, "{}")
+                    : "{}";
+                try {
+                  result[key] = typeof raw === "string" ? JSON.parse(raw) : raw;
+                } catch (e) {
+                  result[key] = defaultVal;
+                }
+              }
             });
             callback(result);
           },
           set: function (obj, callback) {
             if (typeof GM_setValue !== "undefined") {
               for (let key in obj) {
-                GM_setValue(key, obj[key]);
+                if (typeof obj[key] === "object") {
+                  GM_setValue(key, JSON.stringify(obj[key]));
+                } else {
+                  GM_setValue(key, obj[key]);
+                }
               }
             }
             if (callback) callback();
@@ -46,73 +64,162 @@
     };
   }
 
-  // 🎨 [2단계: 사파리 톱니바퀴 UI 인젝터]
-  function injectMobileUI() {
-    if (isExtensionEnv) return; // PC 크롬 확장일 때는 실행 안 함
-    if (!document.body || document.getElementById("ext-mobile-setup-trigger"))
-      return false;
+  // 🎨 [2단계: 모바일 사파리 전용 원 UI 스타일 통합 대시보드 및 가드 인젝터]
+  function injectMobileUIAndStyles() {
+    if (isExtensionEnv) return; // 크롬 확장일 때는 무조건 스킵
+    if (document.getElementById("ext-mobile-dashboard-style")) return;
 
+    // 💅 모바일 전용 One UI 파스텔 스킨 스타일 강제 주입
     const style = document.createElement("style");
+    style.id = "ext-mobile-dashboard-style";
     style.innerHTML = `
             #ext-mobile-setup-trigger {
                 position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 2147483647 !important;
-                width: 55px !important; height: 55px !important; background: #3b82f6 !important; color: #fff !important;
+                width: 54px !important; height: 54px !important; background: #3b82f6 !important; color: #fff !important;
                 border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important;
-                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; cursor: pointer !important;
-                user-select: none !important; -webkit-user-select: none !important;
+                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; cursor: pointer !important; user-select: none !important;
             }
-            #ext-mobile-dashboard {
+            .ext-mob-modal-overlay {
                 position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important;
-                background: rgba(0,0,0,0.5) !important; z-index: 2147483647 !important; display: none !important; align-items: center !important; justify-content: center !important;
+                background: rgba(0,0,0,0.5) !important; z-index: 2147483646 !important; display: none !important; align-items: center !important; justify-content: center !important;
             }
-            .ext-mobile-content { background: #fff !important; width: 88% !important; max-width: 360px !important; padding: 20px !important; border-radius: 16px !important; box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important; color: #111827 !important; }
+            .ext-mob-modal-card {
+                background: #fff !important; width: 90% !important; max-width: 360px !important; padding: 22px !important;
+                border-radius: 16px !important; box-shadow: 0 12px 30px rgba(0,0,0,0.2) !important; color: #111827 !important; font-family: -apple-system, sans-serif !important;
+            }
+            .ext-mob-title { font-size: 15px !important; font-weight: 700 !important; margin-bottom: 12px !important; color: #1f2937 !important; display: flex; align-items: center; gap: 6px; }
+            .ext-mob-input { width: 100% !important; padding: 10px 12px !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; font-size: 13px !important; box-sizing: border-box !important; margin-bottom: 12px !important; }
+            .ext-mob-btn-group { display: flex !important; gap: 8px !important; justify-content: flex-end !important; margin-top: 14px !important; }
+            .ext-mob-btn { padding: 9px 15px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 8px !important; cursor: pointer !important; border: none !important; }
+            .ext-mob-btn-primary { background: #3b82f6 !important; color: #fff !important; }
+            .ext-mob-btn-secondary { background: #f3f4f6 !important; color: #4b5563 !important; }
+            .ext-mob-btn-danger { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
+            
+            /* 톱니바퀴 대시보드 리스트 전용 스타일 */
+            .ext-mob-kv-list { margin: 8px 0 !important; padding: 0 !important; list-style: none !important; max-height: 140px !important; overflow-y: auto !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
+            .ext-mob-kv-list li { padding: 8px 12px !important; border-bottom: 1px solid #f3f4f6 !important; display: flex !important; justify-content: space-between !important; font-size: 13px !important; background: #fff; }
+            .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; cursor: pointer !important; }
         `;
     document.head.appendChild(style);
 
+    // 1. 우하단 플로팅 단추 인젝션
     const triggerBtn = document.createElement("div");
     triggerBtn.id = "ext-mobile-setup-trigger";
     triggerBtn.innerText = "⚙️";
     document.body.appendChild(triggerBtn);
 
-    const dashboardModal = document.createElement("div");
-    dashboardModal.id = "ext-mobile-dashboard";
-    dashboardModal.innerHTML = `
-            <div class="ext-mobile-content">
-                <h3 style="margin-top:0; font-size:16px; font-weight:bold; color:#111827;">⚙️ 모바일 설정 대시보드</h3>
-                <p style="font-size:13px; color:#4b5563; line-height:1.4;">이 영역에 추후 모바일용 설정 인터페이스 마크업이 결합됩니다.</p>
-                <button id="ext-mob-close-btn" style="width:100%; margin-top:15px; padding:10px; background:#e5e7eb; color:#4b5563; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">닫기</button>
+    // 2. 메인 대시보드 모달 주입
+    const dashboardOverlay = document.createElement("div");
+    dashboardOverlay.id = "ext-mobile-dashboard";
+    dashboardOverlay.className = "ext-mob-modal-overlay";
+    dashboardOverlay.innerHTML = `
+            <div class="ext-mob-modal-card">
+                <div class="ext-mob-title">🚫 모바일 차단 키워드 관리</div>
+                <ul class="ext-mob-kv-list" id="ext-mob-kw-container"></ul>
+                <div style="display:flex; gap:6px; margin-bottom:14px;">
+                    <input type="text" id="ext-mob-new-kw-input" class="ext-mob-input" placeholder="차단할 단어 입력..." style="margin-bottom:0 !important; flex:1;">
+                    <button class="ext-mob-btn ext-mob-btn-primary" id="ext-mob-kw-add-btn" style="padding:0 14px !important;">추가</button>
+                </div>
+                <div class="ext-mob-title" style="margin-top:16px;">🎨 차단 방식 설정</div>
+                <label style="display:block; font-size:13px; margin-bottom:6px; color:#374151;"><input type="radio" name="mobBlockRadio" value="blind"> 가림막으로 접기</label>
+                <label style="display:block; font-size:13px; color:#374151; margin-bottom:16px;"><input type="radio" name="mobBlockRadio" value="badge"> 글 유지하고 배경/배지만 보기</label>
+                <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-dashboard-close" style="width:100% !important; font-weight:700 !important; padding:11px !important;">설정 완료 및 창 닫기</button>
             </div>
         `;
-    document.body.appendChild(dashboardModal);
+    document.body.appendChild(dashboardOverlay);
 
+    // 3. ⚙️ 대시보드 내부 제어 이벤트 바인딩
     triggerBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      dashboardModal.style.display = "flex";
-    });
-    dashboardModal
-      .querySelector("#ext-mob-close-btn")
-      .addEventListener("click", () => {
-        dashboardModal.style.display = "none";
+      chrome.storage.local.get(["keywords", "blockMethod"], (res) => {
+        let kws = Array.isArray(res.keywords) ? res.keywords : [];
+        let method = res.blockMethod || "badge";
+
+        // 라디오 상태 동기화
+        const targetRadio = dashboardOverlay.querySelector(
+          `input[name="mobBlockRadio"][value="${method}"]`,
+        );
+        if (targetRadio) targetRadio.checked = true;
+
+        // 키워드 리스트 렌더링
+        const container = document.getElementById("ext-mob-kw-container");
+        container.innerHTML = "";
+        kws.forEach((kw, idx) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-idx="${idx}">삭제</span>`;
+          container.appendChild(li);
+        });
+        dashboardOverlay.style.display = "flex";
       });
+    });
+
+    // 대시보드 내부 키워드 추가 단추 발동 리스너
+    document
+      .getElementById("ext-mob-kw-add-btn")
+      .addEventListener("click", () => {
+        const input = document.getElementById("ext-mob-new-kw-input");
+        const val = input.value.trim();
+        if (!val) return;
+        chrome.storage.local.get(["keywords"], (res) => {
+          let kws = Array.isArray(res.keywords) ? res.keywords : [];
+          if (!kws.includes(val)) {
+            kws.push(val);
+            chrome.storage.local.set({ keywords: kws }, () => {
+              input.value = "";
+              document.getElementById("ext-mobile-setup-trigger").click(); // 리스트 새로고침 우회 가동
+            });
+          }
+        });
+      });
+
+    // 대시보드 내부 키워드 삭제 단추 (이벤트 위임)
+    document
+      .getElementById("ext-mob-kw-container")
+      .addEventListener("click", (e) => {
+        if (e.target.classList.contains("ext-mob-kv-del")) {
+          const idx = parseInt(e.target.dataset.idx);
+          chrome.storage.local.get(["keywords"], (res) => {
+            let kws = Array.isArray(res.keywords) ? res.keywords : [];
+            kws.splice(idx, 1);
+            chrome.storage.local.set({ keywords: kws }, () => {
+              document.getElementById("ext-mobile-setup-trigger").click();
+            });
+          });
+        }
+      });
+
+    // 대시보드 최종 저장 및 저장 리프레시 버튼 리스너
+    document
+      .getElementById("ext-mobile-dashboard-close")
+      .addEventListener("click", () => {
+        const checkedRadio = dashboardOverlay.querySelector(
+          'input[name="mobBlockRadio"]:checked',
+        );
+        const method = checkedRadio ? checkedRadio.value : "badge";
+        chrome.storage.local.set({ blockMethod: method }, () => {
+          dashboardOverlay.style.display = "none";
+          window.location.reload();
+        });
+      });
+
     return true;
   }
 
-  // 사파리 강제 로딩 타이밍 추적용 다중 가드
   if (document.body) {
-    injectMobileUI();
+    injectMobileUIAndStyles();
   } else {
-    document.addEventListener("DOMContentLoaded", injectMobileUI);
+    document.addEventListener("DOMContentLoaded", injectMobileUIAndStyles);
     const bodyObserver = new MutationObserver(() => {
       if (document.body) {
-        if (injectMobileUI()) bodyObserver.disconnect();
+        if (injectMobileUIAndStyles()) bodyObserver.disconnect();
       }
     });
     bodyObserver.observe(document, { childList: true, subtree: true });
   }
 
   // =========================================================
-  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역 (기존 app.js 핵심 연산 원본)]
+  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역 (차단/메모 모달 포함)]
   // =========================================================
   const blockColor = "f43f5e";
   const grantColor = "16a34a";
@@ -122,47 +229,15 @@
   loadingOverlay.id = "ext-loading-overlay";
   loadingOverlay.innerHTML = `<div class="spinner"></div><div class="loading-text">페이지 최적화 중...</div>`;
 
-  const blockModal = document.createElement("div");
-  blockModal.id = "ext-block-modal";
-  blockModal.style.display = "none";
-  blockModal.innerHTML = `
-        <div class="modal-content">
-            <p id="modal-msg"></p>
-            <p style="margin-bottom: 0;">차단 사유</p>
-            <div class="input-group" style="margin-bottom:1rem;">
-              <input type="text" id="ext-block-reason-input" placeholder="한글, 숫자, 영어, 일부 특수문자(,.) 만 입력가능!" />
-            </div>
-            <div class="modal-btns">
-                <button id="modal-confirm-btn" class="btn-danger">차단</button>
-                <button id="modal-cancel-btn" class="btn-secondary">취소</button>
-            </div>
-        </div>
+  // 🛡️ 모바일 크로스오버용 통합 차단/메모 수동 모달 통합 레이어 생성
+  const hybridModalOverlay = document.createElement("div");
+  hybridModalOverlay.id = "ext-hybrid-modal-overlay";
+  hybridModalOverlay.className = "ext-mob-modal-overlay";
+  hybridModalOverlay.style.cssText =
+    "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100002; display: none; align-items: center; justify-content: center;";
+  hybridModalOverlay.innerHTML = `
+        <div class="ext-mob-modal-card" id="ext-hybrid-card-content"></div>
     `;
-
-  const memoModal = document.createElement("div");
-  memoModal.id = "ext-memo-modal";
-  memoModal.className = "ext-custom-modal-layout";
-  memoModal.style.cssText =
-    "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100002;";
-  memoModal.innerHTML = `
-        <div class="modal-content" style="background: #fff; padding: 20px; border-radius: 12px; width: 90%; max-width: 380px; box-shadow: 0 4px 166px rgba(0,0,0,0.15);">
-            <p style="margin-top: 0; font-weight: bold; font-size: 14px; color: #111827;" id="ext-memo-modal-title"></p>
-            <div class="input-group" style="margin: 14px 0 8px 0;">
-              <input type="text" id="ext-user-memo-modal-input" placeholder="이 사용자에 대한 메모를 입력하세요..." style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;" />
-            </div>
-            <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: bold; color: #64748b;">🎨 배지 색상 선택</p>
-            <div id="ext-memo-color-picker" style="display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 18px; padding: 4px 0;"></div>
-            <div class="modal-btns" style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
-                <button id="memo-modal-delete-btn" style="margin-right: auto; padding: 8px 14px; font-size: 13px; font-weight: bold; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 6px; cursor: pointer; display: none;">삭제</button>
-                <button id="memo-modal-confirm-btn" style="padding: 8px 14px; font-size: 13px; font-weight: bold; background: #3b82f6; color: #fff; border: none; border-radius: 6px; cursor: pointer;">저장</button>
-                <button id="memo-modal-cancel-btn" style="padding: 8px 14px; font-size: 13px; font-weight: bold; background: #e5e7eb; color: #4b5563; border: none; border-radius: 6px; cursor: pointer;">취소</button>
-            </div>
-        </div>
-    `;
-
-  const dogconContextMenu = document.createElement("div");
-  dogconContextMenu.id = "ext-dogcon-menu";
-  dogconContextMenu.style.display = "none";
 
   function removeLoadingOverlay() {
     const overlay = document.getElementById("ext-loading-overlay");
@@ -180,16 +255,7 @@
       !document.getElementById("ext-loading-overlay")
     ) {
       document.documentElement.appendChild(loadingOverlay);
-      document.documentElement.appendChild(blockModal);
-      document.documentElement.appendChild(memoModal);
-      document.documentElement.appendChild(
-        document.getElementById("ext-dogcon-menu")
-          ? document.createElement("div")
-          : dogconContextMenu,
-      );
-      bindReasonInputGuard();
-      bindBlockModalEvents();
-      bindMemoModalEvents();
+      document.documentElement.appendChild(hybridModalOverlay); // 신형 하이브리드 모달 탑재
       return true;
     }
     return false;
@@ -209,19 +275,157 @@
   let lastClickedUserData = { memberId: "", nickname: "" };
   let currentActiveDogconData = null;
 
-  function bindReasonInputGuard() {
-    const reasonInput = document.getElementById("ext-block-reason-input");
-    if (!reasonInput) return;
-    reasonInput.addEventListener("input", (e) => {
-      const originalValue = e.target.value;
-      const filteredValue = originalValue.replace(
-        /[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9.,\s]/g,
-        "",
-      );
-      if (originalValue !== filteredValue) {
-        e.target.value = filteredValue;
+  // ⚡ [모바일 최적화 수정] 수동 유저 차단 모달 렌더링 엔진
+  function openBlockModal(nickname, memberId) {
+    targetNicknameToBlock = nickname;
+    targetMemberIdToBlock = memberId;
+    const card = document.getElementById("ext-hybrid-card-content");
+    card.innerHTML = `
+          <div class="ext-mob-title">🚫 사용자 차단하기</div>
+          <p style="font-size:13px; line-height:1.4; color:#4b5563; margin-bottom:14px;"><strong>${nickname}(${memberId})</strong> 유저를 차단 진형에 추가합니다. 차단 사유(메모)를 기입해 주세요.</p>
+          <input type="text" id="ext-block-reason-input" class="ext-mob-input" placeholder="차단 사유를 간략히 입력하세요..." autocomplete="off">
+          <div class="ext-mob-btn-group">
+              <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-block-cancel">취소</button>
+              <button class="ext-mob-btn ext-mob-btn-primary" id="ext-mob-block-confirm" style="background:#ef4444 !important;">차단하기</button>
+          </div>
+      `;
+    hybridModalOverlay.style.display = "flex";
+
+    document
+      .getElementById("ext-mob-block-cancel")
+      .addEventListener("click", () => {
+        hybridModalOverlay.style.display = "none";
+      });
+    document
+      .getElementById("ext-mob-block-confirm")
+      .addEventListener("click", () => {
+        const blockReason = document
+          .getElementById("ext-block-reason-input")
+          .value.trim();
+        const newBlockUserObj = {
+          date: "2026/05/19",
+          member_num: String(targetMemberIdToBlock).trim(),
+          memo: blockReason,
+        };
+
+        chrome.storage.local.get(["blocked_users"], (result) => {
+          const list = Array.isArray(result.blocked_users)
+            ? result.blocked_users
+            : [];
+          if (
+            !list.some(
+              (item) =>
+                String(item.member_num) === String(targetMemberIdToBlock),
+            )
+          ) {
+            list.push(newBlockUserObj);
+            chrome.storage.local.set({ blocked_users: list }, () => {
+              hybridModalOverlay.style.display = "none";
+              window.location.reload();
+            });
+          } else {
+            hybridModalOverlay.style.display = "none";
+          }
+        });
+      });
+  }
+
+  // ⚡ [모바일 최적화 수정] 유저 메모 관리 모달 렌더링 엔진
+  function openUserMemoModal(nickname, memberId, rawMemoData) {
+    targetMemoMemberId = memberId;
+    let currentMemoText = "";
+    selectedMemoColorStyle = "blue";
+    if (rawMemoData) {
+      if (rawMemoData.includes(":")) {
+        const parts = rawMemoData.split(":");
+        currentMemoText = parts[0];
+        selectedMemoColorStyle = parts[1] || "blue";
+      } else {
+        currentMemoText = rawMemoData;
       }
+    }
+
+    const card = document.getElementById("ext-hybrid-card-content");
+    card.innerHTML = `
+          <div class="ext-mob-title">📝 유저 메모 관리</div>
+          <p style="font-size:13px; color:#4b5563; margin-bottom:10px;"><strong>${nickname}</strong> 유저에 대한 고유 메모를 적어주세요.</p>
+          <input type="text" id="ext-user-memo-modal-input" class="ext-mob-input" placeholder="메모 내용 입력..." value="${currentMemoText}" autocomplete="off">
+          
+          <p style="font-size: 11px; font-weight: bold; color: #64748b; margin: 4px 0 6px 0;">🎨 배지 레이블 색상 선택</p>
+          <div id="ext-mob-color-box" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;"></div>
+
+          <div class="ext-mob-btn-group">
+              <button class="ext-mob-btn ext-mob-btn-danger" id="ext-mob-memo-delete" style="margin-right:auto; display:${currentMemoText ? "block" : "none"};">삭제</button>
+              <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-memo-cancel">취소</button>
+              <button class="ext-mob-btn ext-mob-btn-primary" id="ext-mob-memo-save">저장</button>
+          </div>
+      `;
+
+    // 모바일 원 UI용 컬러 피커 팔레트 동적 구축
+    const colors = [
+      { k: "blue", c: "#3b82f6" },
+      { k: "green", c: "#10b981" },
+      { k: "red", c: "#ef4444" },
+      { k: "yellow", c: "#f59e0b" },
+      { k: "purple", c: "#8b5cf6" },
+      { k: "gray", c: "#64748b" },
+    ];
+    const colorBox = document.getElementById("ext-mob-color-box");
+    colors.forEach((col) => {
+      const chip = document.createElement("div");
+      chip.style.cssText = `width:20px; height:20px; border-radius:50%; background:${col.c}; cursor:pointer; border:2px solid ${selectedMemoColorStyle === col.k ? "#111827" : "transparent"}`;
+      chip.addEventListener("click", () => {
+        selectedMemoColorStyle = col.k;
+        colorBox
+          .querySelectorAll("div")
+          .forEach((d) => (d.style.borderColor = "transparent"));
+        chip.style.borderColor = "#111827";
+      });
+      colorBox.appendChild(chip);
     });
+
+    hybridModalOverlay.style.display = "flex";
+    document.getElementById("ext-user-memo-modal-input").focus();
+
+    document
+      .getElementById("ext-mob-memo-cancel")
+      .addEventListener("click", () => {
+        hybridModalOverlay.style.display = "none";
+      });
+
+    document
+      .getElementById("ext-mob-memo-delete")
+      .addEventListener("click", () => {
+        chrome.storage.local.get(["userMemos"], (res) => {
+          const currentMemos = res.userMemos || {};
+          delete currentMemos[targetMemoMemberId];
+          chrome.storage.local.set({ userMemos: currentMemos }, () => {
+            hybridModalOverlay.style.display = "none";
+            window.location.reload();
+          });
+        });
+      });
+
+    document
+      .getElementById("ext-mob-memo-save")
+      .addEventListener("click", () => {
+        const memoText = document
+          .getElementById("ext-user-memo-modal-input")
+          .value.trim();
+        chrome.storage.local.get(["userMemos"], (res) => {
+          const currentMemos = res.userMemos || {};
+          if (memoText === "") {
+            delete currentMemos[targetMemoMemberId];
+          } else {
+            currentMemos[targetMemoMemberId] =
+              `${memoText}:${selectedMemoColorStyle}`;
+          }
+          chrome.storage.local.set({ userMemos: currentMemos }, () => {
+            hybridModalOverlay.style.display = "none";
+            window.location.reload();
+          });
+        });
+      });
   }
 
   function buildBlindWrapperHTML(typeLabel, originalHTML) {
@@ -324,10 +528,18 @@
         ],
         (result) => {
           if (chrome.runtime?.lastError) return;
-          const filterKeywords = result.keywords || [];
-          const blockedUsers = result.blocked_users || [];
-          const blockedDogcons = result.blockedDogcons || [];
-          const blockedDogconGroups = result.blockedDogconGroups || [];
+          const filterKeywords = Array.isArray(result.keywords)
+            ? result.keywords
+            : [];
+          const blockedUsers = Array.isArray(result.blocked_users)
+            ? result.blocked_users
+            : [];
+          const blockedDogcons = Array.isArray(result.blockedDogcons)
+            ? result.blockedDogcons
+            : [];
+          const blockedDogconGroups = Array.isArray(result.blockedDogconGroups)
+            ? result.blockedDogconGroups
+            : [];
           const isBlindMode = result.blockMethod === "blind";
           const isBadgeMode = result.blockMethod === "badge";
           const memos = result.userMemos || {};
@@ -762,6 +974,7 @@
                       .querySelector("a")
                       .addEventListener("click", (e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         openBlockModal(nicknameText, currentMemberId);
                       });
                   }
@@ -831,6 +1044,7 @@
                   blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${blockColor}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-slash"></i></span> 차단</a>`;
                   blockLi.querySelector("a").addEventListener("click", (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     openBlockModal(
                       authorElement.textContent.trim(),
                       authorMemberId,
@@ -1025,6 +1239,12 @@
         lastClickedUserData.nickname = nickname;
       }
     }
+
+    // 개드립 본섭 드롭다운 팝업 메뉴 가드 바인딩 (수동 차단/메모 메뉴 연결)
+    const targetMenuParent = event.target.closest("#popup_menu_area");
+    if (targetMenuParent) {
+      handlePopupMenuDetected(targetMenuParent);
+    }
   });
 
   function handleSingleBlockToggle() {
@@ -1065,218 +1285,6 @@
     });
   }
 
-  function openBlockModal(nickname, memberId) {
-    targetNicknameToBlock = nickname;
-    targetMemberIdToBlock = memberId;
-    const reasonInput = document.getElementById("ext-block-reason-input");
-    if (reasonInput) reasonInput.value = "";
-    const msgEl = document.getElementById("modal-msg");
-    const modalEl = document.getElementById("ext-block-modal");
-    if (msgEl && modalEl) {
-      msgEl.innerHTML = `<strong>${nickname}${memberId ? `(${memberId})` : ""}</strong>님을 차단하시겠습니까?<br />차단 시 대상의 글과 댓글이 보이지 않습니다.`;
-      modalEl.style.display = "flex";
-    }
-  }
-
-  function closeBlockModal() {
-    const modalEl = document.getElementById("ext-block-modal");
-    if (modalEl) modalEl.style.display = "none";
-    targetNicknameToBlock = "";
-    targetMemberIdToBlock = "";
-    const reasonInput = document.getElementById("ext-block-reason-input");
-    if (reasonInput) reasonInput.value = "";
-  }
-
-  function bindBlockModalEvents() {
-    const confirmBtn = document.getElementById("modal-confirm-btn");
-    const cancelBtn = document.getElementById("modal-cancel-btn");
-    if (cancelBtn) cancelBtn.addEventListener("click", closeBlockModal);
-    if (confirmBtn) {
-      confirmBtn.addEventListener("click", () => {
-        if (
-          typeof chrome === "undefined" ||
-          !chrome.runtime ||
-          !chrome.runtime.id
-        ) {
-          alert("📢 데이터 통신 연결이 해제되어 페이지를 다시 로드합니다.");
-          window.location.reload();
-          return;
-        }
-        if (!targetNicknameToBlock || !targetMemberIdToBlock) {
-          closeBlockModal();
-          return;
-        }
-        const reasonInput = document.getElementById("ext-block-reason-input");
-        const blockReason = reasonInput ? reasonInput.value.trim() : "";
-        const newBlockUserObj = {
-          date: "2026/05/19",
-          member_num: String(targetMemberIdToBlock).trim(),
-          memo: blockReason,
-        };
-
-        chrome.storage.local.get(["blocked_users"], (result) => {
-          if (chrome.runtime?.lastError) return;
-          const list = result.blocked_users || [];
-          const isAlreadyExist = list.some(
-            (item) => String(item.member_num) === String(targetMemberIdToBlock),
-          );
-          if (!isAlreadyExist) {
-            list.push(newBlockUserObj);
-            chrome.storage.local.set({ blocked_users: list }, () => {
-              closeBlockModal();
-              window.location.reload();
-            });
-          } else {
-            closeBlockModal();
-          }
-        });
-      });
-    }
-  }
-
-  function openUserMemoModal(nickname, memberId, rawMemoData) {
-    targetMemoMemberId = memberId;
-    let currentMemoText = "";
-    selectedMemoColorStyle = "blue";
-    if (rawMemoData) {
-      if (rawMemoData.includes(":")) {
-        const parts = rawMemoData.split(":");
-        currentMemoText = parts[0];
-        selectedMemoColorStyle = parts[1] || "blue";
-      } else {
-        currentMemoText = rawMemoData;
-      }
-    }
-    const titleEl = document.getElementById("ext-memo-modal-title");
-    const inputEl = document.getElementById("ext-user-memo-modal-input");
-    const deleteBtn = document.getElementById("memo-modal-delete-btn");
-    if (titleEl)
-      titleEl.innerHTML = `📝 <strong>${nickname}</strong> 유저 메모 관리`;
-    if (inputEl) {
-      inputEl.value = currentMemoText;
-      setTimeout(() => inputEl.focus(), 50);
-    }
-    if (deleteBtn) {
-      deleteBtn.style.display = currentMemoText !== "" ? "block" : "none";
-    }
-    renderMemoColorPickerUI();
-    memoModal.style.display = "flex";
-  }
-
-  function closeUserMemoModal() {
-    memoModal.style.display = "none";
-    targetMemoMemberId = "";
-    const inputEl = document.getElementById("ext-user-memo-modal-input");
-    if (inputEl) inputEl.value = "";
-  }
-
-  function renderMemoColorPickerUI() {
-    const pickerContainer = document.getElementById("ext-memo-color-picker");
-    if (!pickerContainer) return;
-    pickerContainer.innerHTML = "";
-    const colorPalette = [
-      { key: "blue", hex: "#3b82f6", name: "블루" },
-      { key: "green", hex: "#10b981", name: "그린" },
-      { key: "red", hex: "#ef4444", name: "레드" },
-      { key: "yellow", hex: "#f59e0b", name: "옐로우" },
-      { key: "purple", hex: "#8b5cf6", name: "퍼플" },
-      { key: "pink", hex: "#ec4899", name: "핑크" },
-      { key: "cyan", hex: "#06b6d4", name: "시안" },
-      { key: "orange", hex: "#f97316", name: "오렌지" },
-      { key: "teal", hex: "#14b8a6", name: "티일" },
-      { key: "gray", hex: "#64748b", name: "그레이" },
-    ];
-    colorPalette.forEach((color) => {
-      const chip = document.createElement("div");
-      chip.className = `ext-memo-color-chip-item ${color.key}`;
-      chip.style.cssText = `width: 22px; height: 22px; border-radius: 50%; background-color: ${color.hex}; cursor: pointer; box-sizing: border-box; transition: all 0.15s ease; border: 2px solid transparent;`;
-      chip.title = color.name;
-      if (selectedMemoColorStyle === color.key) {
-        chip.style.borderColor = "#111827";
-        chip.style.transform = "scale(1.15)";
-        chip.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
-      }
-      chip.addEventListener("click", () => {
-        selectedMemoColorStyle = color.key;
-        pickerContainer
-          .querySelectorAll(".ext-memo-color-chip-item")
-          .forEach((el) => {
-            el.style.borderColor = "transparent";
-            el.style.transform = "scale(1)";
-            el.style.boxShadow = "none";
-          });
-        chip.style.borderColor = "#111827";
-        chip.style.transform = "scale(1.15)";
-        chip.style.boxShadow = "0 2px 6px rgba(0,0,0,0.15)";
-      });
-      pickerContainer.appendChild(chip);
-    });
-  }
-
-  function bindMemoModalEvents() {
-    const confirmBtn = document.getElementById("memo-modal-confirm-btn");
-    const cancelBtn = document.getElementById("memo-modal-cancel-btn");
-    const deleteBtn = document.getElementById("memo-modal-delete-btn");
-    const inputEl = document.getElementById("ext-user-memo-modal-input");
-    cancelBtn.addEventListener("click", closeUserMemoModal);
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        confirmBtn.click();
-      }
-    });
-    deleteBtn.addEventListener("click", () => {
-      if (
-        typeof chrome === "undefined" ||
-        !chrome.runtime ||
-        !chrome.runtime.id
-      ) {
-        window.location.reload();
-        return;
-      }
-      if (!targetMemoMemberId) {
-        closeUserMemoModal();
-        return;
-      }
-      chrome.storage.local.get(["userMemos"], (res) => {
-        const currentMemos = res.userMemos || {};
-        delete currentMemos[targetMemoMemberId];
-        chrome.storage.local.set({ userMemos: currentMemos }, () => {
-          closeUserMemoModal();
-          window.location.reload();
-        });
-      });
-    });
-    confirmBtn.addEventListener("click", () => {
-      if (
-        typeof chrome === "undefined" ||
-        !chrome.runtime ||
-        !chrome.runtime.id
-      ) {
-        window.location.reload();
-        return;
-      }
-      if (!targetMemoMemberId) {
-        closeUserMemoModal();
-        return;
-      }
-      const memoText = inputEl.value.trim();
-      chrome.storage.local.get(["userMemos"], (res) => {
-        const currentMemos = res.userMemos || {};
-        if (memoText === "") {
-          delete currentMemos[targetMemoMemberId];
-        } else {
-          currentMemos[targetMemoMemberId] =
-            `${memoText}:${selectedMemoColorStyle}`;
-        }
-        chrome.storage.local.set({ userMemos: currentMemos }, () => {
-          closeUserMemoModal();
-          window.location.reload();
-        });
-      });
-    });
-  }
-
   function handlePopupMenuDetected(popupElement) {
     const currentDisplay = window.getComputedStyle(popupElement).display;
     if (currentDisplay === "none") return;
@@ -1284,7 +1292,9 @@
       chrome.storage.local.get(["blocked_users", "userMemos"], (result) => {
         if (chrome.runtime?.lastError || !chrome.runtime || !chrome.runtime.id)
           return;
-        const list = result.blocked_users || [];
+        const list = Array.isArray(result.blocked_users)
+          ? result.blocked_users
+          : [];
         const memos = result.userMemos || {};
         const isAlreadyBlocked = list.some(
           (item) =>
@@ -1343,7 +1353,9 @@
         popupMenuParentEl.style.display = "none";
         chrome.storage.local.get(["blocked_users"], (res) => {
           if (chrome.runtime?.lastError) return;
-          let currentList = res.blocked_users || [];
+          let currentList = Array.isArray(res.blocked_users)
+            ? res.blocked_users
+            : [];
           currentList = currentList.filter(
             (item) => String(item.member_num) !== String(memberId),
           );
@@ -1446,29 +1458,6 @@
         setTimeout(() => {
           overlay.remove();
         }, 200);
-      }
-    }
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" || e.key === "Esc") {
-      const blockModal = document.getElementById("ext-block-modal");
-      if (blockModal && blockModal.style.display === "flex") {
-        if (typeof closeBlockModal === "function") {
-          closeBlockModal();
-        } else {
-          blockModal.style.display = "none";
-        }
-      }
-      const memoModal =
-        document.getElementById("ext-ext-memo-modal") ||
-        document.getElementById("ext-memo-modal");
-      if (memoModal && memoModal.style.display === "flex") {
-        if (typeof closeUserMemoModal === "function") {
-          closeUserMemoModal();
-        } else {
-          memoModal.style.display = "none";
-        }
       }
     }
   });
