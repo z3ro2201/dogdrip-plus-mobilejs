@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.3
+// @version      1.1.5
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -13,6 +13,7 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @run-at       document-start
+// @connect      raw.githubusercontent.com
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // ==/UserScript==
@@ -213,16 +214,43 @@
     .ext-block-menu-item { cursor: pointer; }
 
     /* ── ⚙️ 플로팅 설정 버튼 ── */
-    #ext-gear-btn {
-      position: fixed; bottom: 22px; right: 18px; z-index: 999998;
-      width: 48px; height: 48px; border-radius: 50%;
-      background: #3b82f6; color: #fff; border: none;
-      font-size: 20px; cursor: pointer;
-      box-shadow: 0 4px 14px rgba(59,130,246,0.45);
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.2s, background 0.2s;
+    /* ── 기어 버튼 래퍼 ── */
+    #ext-gear-wrap {
+      position: fixed; bottom: 24px; right: 16px; z-index: 999998;
+      display: flex; flex-direction: column; align-items: center;
     }
-    #ext-gear-btn:active { transform: scale(0.92); background: #2563eb; }
+    #ext-gear-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(30,30,40,0.72);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      color: #e2e8f0; border: 1px solid rgba(255,255,255,0.12);
+      font-size: 19px; cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.28);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.18s, background 0.18s;
+      position: relative;
+    }
+    #ext-gear-btn:active { transform: scale(0.88); }
+    /* 업데이트 있을 때 */
+    #ext-gear-btn.has-update {
+      background: rgba(234,88,12,0.88);
+      border-color: rgba(255,160,60,0.5);
+      animation: extGearPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes extGearPulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(234,88,12,0.5); }
+      50%      { box-shadow: 0 0 0 7px rgba(234,88,12,0); }
+    }
+    #ext-update-badge {
+      display: none;
+      background: #ef4444; color: #fff;
+      font-size: 10px; font-weight: bold;
+      padding: 2px 5px; border-radius: 6px;
+      margin-bottom: 3px; white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      letter-spacing: 0.03em;
+    }
+    #ext-update-badge.show { display: block; }
 
     /* ── 설정 패널 ── */
     #ext-settings-panel {
@@ -378,10 +406,20 @@
   dogconMenuEl.id = "ext-dogcon-menu";
 
   // ── ⚙️ 플로팅 버튼
+  const gearWrap = document.createElement("div");
+  gearWrap.id = "ext-gear-wrap";
+
+  const gearUpdateBadge = document.createElement("div");
+  gearUpdateBadge.id = "ext-update-badge";
+  gearUpdateBadge.textContent = "NEW";
+
   const gearBtn = document.createElement("button");
   gearBtn.id = "ext-gear-btn";
   gearBtn.title = "개드립 Plus+ 설정";
   gearBtn.textContent = "⚙️";
+
+  gearWrap.appendChild(gearUpdateBadge);
+  gearWrap.appendChild(gearBtn);
 
   // ── 설정 패널
   const settingsPanel = document.createElement("div");
@@ -389,7 +427,7 @@
   settingsPanel.innerHTML = `
     <div id="ext-settings-inner">
       <div id="ext-settings-header">
-        <h2>⚙️ 개드립 Plus+</h2>
+        <h2>⚙️ 개드립 Plus+ <small style="font-size:11px;color:#94a3b8;font-weight:normal;">(Mobile)</small></h2>
         <button id="ext-settings-close">✕</button>
       </div>
       <div class="ext-tab-bar">
@@ -451,7 +489,6 @@
         <p class="ext-section-label">레이아웃</p>
         <div class="ext-switch-row"><label>공지 숨기기</label><label class="ext-toggle"><input type="checkbox" id="s-hide-notice"><span class="ext-toggle-slider"></span></label></div>
         <div class="ext-switch-row"><label>인기글 숨기기</label><label class="ext-toggle"><input type="checkbox" id="s-hide-popular"><span class="ext-toggle-slider"></span></label></div>
-        <div class="ext-switch-row"><label>사이드바 숨기기</label><label class="ext-toggle"><input type="checkbox" id="s-hide-sidebar"><span class="ext-toggle-slider"></span></label></div>
         <div class="ext-switch-row"><label>컴팩트 모드</label><label class="ext-toggle"><input type="checkbox" id="s-compact"><span class="ext-toggle-slider"></span></label></div>
         <div class="ext-switch-row"><label>추천수 비공개</label><label class="ext-toggle"><input type="checkbox" id="s-disable-vote"><span class="ext-toggle-slider"></span></label></div>
         <div class="ext-switch-row"><label>유튜브 알고리즘 방지</label><label class="ext-toggle"><input type="checkbox" id="s-no-yt"><span class="ext-toggle-slider"></span></label></div>
@@ -490,7 +527,7 @@
     document.documentElement.appendChild(blockModalEl);
     document.documentElement.appendChild(memoModalEl);
     document.documentElement.appendChild(dogconMenuEl);
-    document.documentElement.appendChild(gearBtn);
+    document.documentElement.appendChild(gearWrap);
     document.documentElement.appendChild(settingsPanel);
     bindBlockModal();
     bindMemoModal();
@@ -725,36 +762,58 @@
           handleUserEl(li, nickEl, mid, mid && blockedIds.includes(mid), true);
         });
 
-      // ③ 테이블형
+      // ③ 테이블형 (원본 PC 로직 동일)
       document.querySelectorAll("tr.ed").forEach((row) => {
         const titleEl = row.querySelector(".title");
-        const authEl = row.querySelector(".author a[class*='member_']");
-        let titleText = "";
-        if (titleEl) {
-          const link =
-            titleEl.querySelector(".title-link") ||
-            titleEl.querySelector('a[href*="dogdrip.net/"], a[href^="/"]');
-          if (link) {
-            const c = link.cloneNode(true);
-            c.querySelector(".text-primary")?.remove();
-            titleText = c.textContent.replace(/\[.*?\]/g, "").trim();
-          } else titleText = titleEl.textContent.trim();
+        // .author 한정 대신 row 전체에서 탐색 (원본과 동일)
+        const authEl = row.querySelector("a[class*='member_']");
+        let shouldRemove = false;
+        let shouldBlind = false;
+
+        // 제목 키워드 체크
+        if (titleEl && filterKW.length > 0) {
+          const realLink = titleEl.querySelector(".title-link");
+          let titleText = "";
+          if (realLink) {
+            titleText = realLink.textContent.trim();
+          } else {
+            const mainLink = titleEl.querySelector(
+              'a[href*="dogdrip.net/"], a[href^="/"]',
+            );
+            if (mainLink) {
+              const cl = mainLink.cloneNode(true);
+              cl.querySelector(".text-primary")?.remove();
+              titleText = cl.textContent.replace(/\[.*?\]/g, "").trim();
+            } else {
+              titleText = titleEl.textContent.trim();
+            }
+          }
+          const cleanTitle = titleText.replace(/[\s\n\r\t]+/g, " ").trim();
+          if (filterKW.some((kw) => matchKeyword(cleanTitle, kw, "posts")))
+            shouldRemove = true;
         }
-        if (
-          titleText &&
-          filterKW.some((kw) => matchKeyword(titleText, kw, "posts"))
-        ) {
-          row.remove();
-          return;
-        }
+
+        // 작성자 멤버ID 추출
         let mid = "";
         if (authEl) {
           const m = authEl.className.match(/member_(\d+)/);
-          if (m) mid = m[1];
+          if (m) {
+            mid = m[1];
+            if (blockedIds.includes(mid)) shouldBlind = true;
+          }
         }
-        if (mid && blockedIds.includes(mid)) {
-          if (authEl && !row.querySelector(`.ext-badge-id-${mid}`)) {
-            const u = blockedUsers.find((x) => String(x.member_num) === mid);
+
+        if (shouldRemove) {
+          row.remove();
+          return;
+        }
+
+        if (shouldBlind) {
+          // 차단 사유 배지
+          if (mid && authEl && !row.querySelector(`.ext-badge-id-${mid}`)) {
+            const u = blockedUsers.find(
+              (x) => String(x.member_num) === String(mid),
+            );
             if (u?.memo?.trim())
               authEl.after(createMemoBadge(mid, u.memo.trim(), "red-solid"));
           }
@@ -769,7 +828,9 @@
             const h = row.innerHTML;
             row.innerHTML = `<td colspan="6" style="padding:0;">${buildBlindHTML("게시글", `<table><tr>${h}</tr></table>`)}</td>`;
             bindBlindToggles(row);
-          } else row.remove();
+          } else {
+            row.remove();
+          }
         } else if (
           mid &&
           memos[mid] &&
@@ -1383,7 +1444,26 @@
    * 14. ⚙️ 플로팅 버튼 + 설정 패널
    * ========================================================================= */
   function bindGearAndPanel() {
-    gearBtn.addEventListener("click", () => openSettingsPanel());
+    gearBtn.addEventListener("click", () => {
+      if (
+        gearBtn.classList.contains("has-update") &&
+        window._extLatestVersion
+      ) {
+        const cur = "1.1.5";
+        if (
+          confirm(
+            `🆕 새 버전이 있습니다!\n현재: v${cur}  →  최신: v${window._extLatestVersion}\n\n업데이트 페이지로 이동할까요?`,
+          )
+        ) {
+          window.open(
+            "https://github.com/z3ro2201/dogdrip-plus-mobilejs/raw/main/dogdrip-plus.user.js",
+            "_blank",
+          );
+          return;
+        }
+      }
+      openSettingsPanel();
+    });
     document
       .getElementById("ext-settings-close")
       ?.addEventListener("click", closeSettingsPanel);
@@ -1480,7 +1560,6 @@
     const toggleMap = [
       ["s-hide-notice", "hideNotice"],
       ["s-hide-popular", "hidePopular"],
-      ["s-hide-sidebar", "hideSidebar"],
       ["s-compact", "compactMode"],
       ["s-disable-vote", "disableVote"],
       ["s-no-yt", "preventYoutubeAlgorithm"],
@@ -1953,6 +2032,42 @@
       );
     }
   }
+
+  // ── 버전 체크 (GitHub version.txt)
+  const CURRENT_VERSION = "1.1.5";
+  const VERSION_URL =
+    "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
+
+  function checkVersion() {
+    fetch(VERSION_URL + "?_=" + Date.now())
+      .then((r) => (r.ok ? r.text() : null))
+      .then((text) => {
+        if (!text) return;
+        const latest = text.trim();
+        if (!latest) return;
+        window._extLatestVersion = latest;
+        if (compareVer(latest, CURRENT_VERSION) > 0) {
+          gearBtn.classList.add("has-update");
+          gearUpdateBadge.textContent = "v" + latest;
+          gearUpdateBadge.classList.add("show");
+          gearBtn.title = `개드립 Plus+ 설정 (업데이트 있음: v${latest})`;
+        }
+      })
+      .catch(() => {}); // 네트워크 오류 시 무시
+  }
+
+  function compareVer(a, b) {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    for (let i = 0; i < 3; i++) {
+      if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+      if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+    }
+    return 0;
+  }
+
+  // 로드 후 5초 뒤 체크 (페이지 렌더 방해 안 하도록)
+  window.addEventListener("load", () => setTimeout(checkVersion, 5000));
 
   if (document.body) startObserver();
   else document.addEventListener("DOMContentLoaded", startObserver);
