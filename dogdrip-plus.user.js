@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ 크롬 & 사파리 전천후 마스터 통합본
 // @namespace    https://dogdrip.net/
-// @version      1.9.8
+// @version      1.9.9
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
@@ -66,7 +66,7 @@
     };
   }
 
-  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터 (사파리 터치 씹힘 버그 완전 격파)]
+  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터 (사파리 터치 이벤트 완벽 주입)]
   function injectMobileUIAndStyles() {
     if (isExtensionEnv) return;
     if (document.getElementById("ext-mobile-dashboard-style")) return;
@@ -74,16 +74,17 @@
     const style = document.createElement("style");
     style.id = "ext-mobile-dashboard-style";
     style.innerHTML = `
-            /* 💡 사파리에서는 cursor: pointer가 찍혀있어야 정상적으로 클릭 이벤트를 부모가 수집합니다. */
-            #ext-mobile-setup-trigger, .ext-mob-btn, .ext-mob-kv-del, #ext-mob-dashboard-close, .ext-inserted-member-block a, .ext-inserted-member-memo-link a {
+            /* 💡 사파리 클릭 바인딩 누수 방지용 CSS 포인터 선언 */
+            #ext-mobile-setup-trigger, .ext-mob-btn, .ext-mob-kv-del, #ext-mobile-dashboard-close {
                 cursor: pointer !important;
+                touch-action: manipulation !important;
                 -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
             }
             #ext-mobile-setup-trigger {
                 position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 2147483647 !important;
                 width: 54px !important; height: 54px !important; background: #3b82f6 !important; color: #fff !important;
                 border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important;
-                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; user-select: none !important;
+                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; user-select: none !important; -webkit-user-select: none !important;
             }
             .ext-mob-modal-overlay {
                 position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important;
@@ -151,12 +152,12 @@
       });
     }
 
-    // 🎯 [사파리 전용 핵심 교정]: click 외에 모바일용 click 반응성을 강제 보정하기 위해 독립적 리스너로 재결합
+    // 🎯 [사파리 통합 인터랙션 매니저]: 터치 및 클릭을 동시에 방어하여 씹힘 현상을 완벽히 방지합니다.
     const handleMobileInteraction = (e) => {
       const target = e.target;
       if (!target) return;
 
-      // 1. ⚙️ 톱니바퀴 트리거 터치 시
+      // 1. ⚙️ 톱니바퀴 트리거
       if (target.id === "ext-mobile-setup-trigger") {
         e.preventDefault();
         e.stopPropagation();
@@ -164,7 +165,7 @@
         dashboardOverlay.style.display = "flex";
       }
 
-      // 2. 키워드 추가 버튼 터치 시
+      // 2. 키워드 추가 버튼
       if (target.id === "ext-mob-kw-add-btn") {
         e.preventDefault();
         e.stopPropagation();
@@ -183,7 +184,7 @@
         });
       }
 
-      // 3. 키워드 삭제 버튼 터치 시
+      // 3. 키워드 삭제 버튼
       if (target.classList.contains("ext-mob-kv-del")) {
         e.preventDefault();
         e.stopPropagation();
@@ -197,7 +198,7 @@
         });
       }
 
-      // 4. 대시보드 닫기 버튼 터치 시
+      // 4. 대시보드 완료 버튼
       if (target.id === "ext-mobile-dashboard-close") {
         e.preventDefault();
         e.stopPropagation();
@@ -212,7 +213,7 @@
       }
     };
 
-    // 사파리 하이브리드 이벤트 리스너 이중 방어막 구축
+    // 사파리 모바일 터치 하이브리드 바인딩 안정화
     document.body.addEventListener("click", handleMobileInteraction);
   }
 
@@ -229,7 +230,7 @@
   }
 
   // =========================================================
-  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역 (차단/메모 모달 포함)]
+  // 📦 [3단계: 순정 개드립 코어 필터 엔진 구역]
   // =========================================================
   const blockColor = "f43f5e";
   const grantColor = "16a34a";
@@ -968,10 +969,13 @@
                 }
               }
 
+              // 🛡️ [마비 차단 가드]: 구형 innerHTML 덮어쓰기 분기를 제거하고 전역 단일 위임 리스너에 통제권을 양도합니다.
               if (nicknameElement && currentMemberId) {
-                const nicknameText = nicknameElement.textContent.trim();
                 const dropdownMenu = comment.querySelector("ul.dropdown-menu");
-                if (dropdownMenu) {
+                if (
+                  dropdownMenu &&
+                  !dropdownMenu.querySelector(".ext-block-menu-item")
+                ) {
                   const emptyLis = Array.from(
                     dropdownMenu.querySelectorAll("li"),
                   ).filter((li) => li.innerHTML.trim() === "");
@@ -1134,27 +1138,28 @@
     });
   }
 
-  // 🎯 [사파리 수동 모달 연동 핵심 보정]: 본섭 원래 메뉴 링크들에 강제로 수동 모달 오픈 이벤트를 가로채 가로막습니다.
+  // 🛡️ [사파리 통합 마비 극복 위임 파이프라인]: 순정 메뉴 드롭다운 항목을 터치했을 때 수동 모달을 열어주는 종합 연동 장치
   document.body.addEventListener("click", (e) => {
     const item = e.target.closest("a");
     if (!item) return;
 
-    // 개드립 순정 메뉴 내부의 차단 글자를 감지했을 때
+    // ① 닉네임 박스 메뉴 중 [차단] 누를 때 모바일 모달 강제 매핑
     if (
-      item.textContent.trim() === "차단" &&
+      (item.textContent.trim() === "차단" ||
+        item.classList.contains("ext-block-menu-item")) &&
       item.closest("#popup_menu_area")
     ) {
       e.preventDefault();
       e.stopPropagation();
       const popupMenuArea = document.getElementById("popup_menu_area");
-      if (popupMenuArea) popupMenuArea.style.display = "none"; // 순정 메뉴 상자 숨기기
+      if (popupMenuArea) popupMenuArea.style.display = "none";
       openBlockModal(
         lastClickedUserData.nickname,
         lastClickedUserData.memberId,
       );
     }
 
-    // 개드립 순정 메뉴 내부의 메모 글자를 감지했을 때
+    // ② 닉네임 박스 메뉴 중 [메모] 누를 때 모바일 모달 강제 매핑
     if (
       item.textContent.startsWith("메모") &&
       item.closest("#popup_menu_area")
