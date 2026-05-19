@@ -1,8 +1,10 @@
 // ==UserScript==
 // @name         개드립 Plus+ 크롬 & 사파리 전천후 마스터 통합본
 // @namespace    https://dogdrip.net/
-// @version      1.9.5
+// @version      1.9.7
 // @match        *://*.dogdrip.net/*
+// @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
+// @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        unsafeWindow
@@ -32,7 +34,7 @@
                     ? GM_getValue(key, defaultVal)
                     : defaultVal;
               } else {
-                // JSON 객체 안전 변환 가드
+                // JSON 객체 격리 및 파싱 예외 가드
                 let raw =
                   typeof GM_getValue !== "undefined"
                     ? GM_getValue(key, "{}")
@@ -64,12 +66,11 @@
     };
   }
 
-  // 🎨 [2단계: 모바일 사파리 전용 원 UI 스타일 통합 대시보드 및 가드 인젝터]
+  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터 (이벤트 위임 방식으로 씹힘 버그 완전 격파)]
   function injectMobileUIAndStyles() {
-    if (isExtensionEnv) return; // 크롬 확장일 때는 무조건 스킵
+    if (isExtensionEnv) return;
     if (document.getElementById("ext-mobile-dashboard-style")) return;
 
-    // 💅 모바일 전용 One UI 파스텔 스킨 스타일 강제 주입
     const style = document.createElement("style");
     style.id = "ext-mobile-dashboard-style";
     style.innerHTML = `
@@ -94,21 +95,17 @@
             .ext-mob-btn-primary { background: #3b82f6 !important; color: #fff !important; }
             .ext-mob-btn-secondary { background: #f3f4f6 !important; color: #4b5563 !important; }
             .ext-mob-btn-danger { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
-            
-            /* 톱니바퀴 대시보드 리스트 전용 스타일 */
             .ext-mob-kv-list { margin: 8px 0 !important; padding: 0 !important; list-style: none !important; max-height: 140px !important; overflow-y: auto !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
             .ext-mob-kv-list li { padding: 8px 12px !important; border-bottom: 1px solid #f3f4f6 !important; display: flex !important; justify-content: space-between !important; font-size: 13px !important; background: #fff; }
             .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; cursor: pointer !important; }
         `;
     document.head.appendChild(style);
 
-    // 1. 우하단 플로팅 단추 인젝션
     const triggerBtn = document.createElement("div");
     triggerBtn.id = "ext-mobile-setup-trigger";
     triggerBtn.innerText = "⚙️";
     document.body.appendChild(triggerBtn);
 
-    // 2. 메인 대시보드 모달 주입
     const dashboardOverlay = document.createElement("div");
     dashboardOverlay.id = "ext-mobile-dashboard";
     dashboardOverlay.className = "ext-mob-modal-overlay";
@@ -123,76 +120,70 @@
                 <div class="ext-mob-title" style="margin-top:16px;">🎨 차단 방식 설정</div>
                 <label style="display:block; font-size:13px; margin-bottom:6px; color:#374151;"><input type="radio" name="mobBlockRadio" value="blind"> 가림막으로 접기</label>
                 <label style="display:block; font-size:13px; color:#374151; margin-bottom:16px;"><input type="radio" name="mobBlockRadio" value="badge"> 글 유지하고 배경/배지만 보기</label>
-                <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-dashboard-close" style="width:100% !important; font-weight:700 !important; padding:11px !important;">설정 완료 및 창 닫기</button>
+                <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mobile-dashboard-close" style="width:100% !important; font-weight:700 !important; padding:11px !important;">설정 완료 및 창 닫기</button>
             </div>
         `;
     document.body.appendChild(dashboardOverlay);
 
-    // 3. ⚙️ 대시보드 내부 제어 이벤트 바인딩
-    triggerBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+    // 🔄 리스트 내부 동적 리로드 헬퍼
+    function refreshKeywordUI() {
       chrome.storage.local.get(["keywords", "blockMethod"], (res) => {
         let kws = Array.isArray(res.keywords) ? res.keywords : [];
         let method = res.blockMethod || "badge";
-
-        // 라디오 상태 동기화
         const targetRadio = dashboardOverlay.querySelector(
           `input[name="mobBlockRadio"][value="${method}"]`,
         );
         if (targetRadio) targetRadio.checked = true;
 
-        // 키워드 리스트 렌더링
         const container = document.getElementById("ext-mob-kw-container");
-        container.innerHTML = "";
-        kws.forEach((kw, idx) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-idx="${idx}">삭제</span>`;
-          container.appendChild(li);
-        });
-        dashboardOverlay.style.display = "flex";
+        if (container) {
+          container.innerHTML = "";
+          kws.forEach((kw, idx) => {
+            const li = document.createElement("li");
+            li.innerHTML = `<span>${kw}</span><span class="ext-mob-kv-del" data-idx="${idx}">삭제</span>`;
+            container.appendChild(li);
+          });
+        }
       });
-    });
+    }
 
-    // 대시보드 내부 키워드 추가 단추 발동 리스너
-    document
-      .getElementById("ext-mob-kw-add-btn")
-      .addEventListener("click", () => {
+    // 🎯 [이벤트 위임 적용]: 전역 단일 리스너 구축으로 사파리 비동기 마크업 지연 이슈 완벽 차단
+    document.body.addEventListener("click", (e) => {
+      if (e.target.id === "ext-mobile-setup-trigger") {
+        e.preventDefault();
+        e.stopPropagation();
+        refreshKeywordUI();
+        dashboardOverlay.style.display = "flex";
+      }
+
+      if (e.target.id === "ext-mob-kw-add-btn") {
         const input = document.getElementById("ext-mob-new-kw-input");
-        const val = input.value.trim();
+        const val = input ? input.value.trim() : "";
         if (!val) return;
         chrome.storage.local.get(["keywords"], (res) => {
           let kws = Array.isArray(res.keywords) ? res.keywords : [];
           if (!kws.includes(val)) {
             kws.push(val);
             chrome.storage.local.set({ keywords: kws }, () => {
-              input.value = "";
-              document.getElementById("ext-mobile-setup-trigger").click(); // 리스트 새로고침 우회 가동
+              if (input) input.value = "";
+              refreshKeywordUI();
             });
           }
         });
-      });
+      }
 
-    // 대시보드 내부 키워드 삭제 단추 (이벤트 위임)
-    document
-      .getElementById("ext-mob-kw-container")
-      .addEventListener("click", (e) => {
-        if (e.target.classList.contains("ext-mob-kv-del")) {
-          const idx = parseInt(e.target.dataset.idx);
-          chrome.storage.local.get(["keywords"], (res) => {
-            let kws = Array.isArray(res.keywords) ? res.keywords : [];
-            kws.splice(idx, 1);
-            chrome.storage.local.set({ keywords: kws }, () => {
-              document.getElementById("ext-mobile-setup-trigger").click();
-            });
+      if (e.target.classList.contains("ext-mob-kv-del")) {
+        const idx = parseInt(e.target.dataset.idx);
+        chrome.storage.local.get(["keywords"], (res) => {
+          let kws = Array.isArray(res.keywords) ? res.keywords : [];
+          kws.splice(idx, 1);
+          chrome.storage.local.set({ keywords: kws }, () => {
+            refreshKeywordUI();
           });
-        }
-      });
+        });
+      }
 
-    // 대시보드 최종 저장 및 저장 리프레시 버튼 리스너
-    document
-      .getElementById("ext-mobile-dashboard-close")
-      .addEventListener("click", () => {
+      if (e.target.id === "ext-mobile-dashboard-close") {
         const checkedRadio = dashboardOverlay.querySelector(
           'input[name="mobBlockRadio"]:checked',
         );
@@ -201,7 +192,8 @@
           dashboardOverlay.style.display = "none";
           window.location.reload();
         });
-      });
+      }
+    });
 
     return true;
   }
@@ -229,15 +221,12 @@
   loadingOverlay.id = "ext-loading-overlay";
   loadingOverlay.innerHTML = `<div class="spinner"></div><div class="loading-text">페이지 최적화 중...</div>`;
 
-  // 🛡️ 모바일 크로스오버용 통합 차단/메모 수동 모달 통합 레이어 생성
   const hybridModalOverlay = document.createElement("div");
   hybridModalOverlay.id = "ext-hybrid-modal-overlay";
   hybridModalOverlay.className = "ext-mob-modal-overlay";
   hybridModalOverlay.style.cssText =
     "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100002; display: none; align-items: center; justify-content: center;";
-  hybridModalOverlay.innerHTML = `
-        <div class="ext-mob-modal-card" id="ext-hybrid-card-content"></div>
-    `;
+  hybridModalOverlay.innerHTML = `<div class="ext-mob-modal-card" id="ext-hybrid-card-content"></div>`;
 
   function removeLoadingOverlay() {
     const overlay = document.getElementById("ext-loading-overlay");
@@ -255,7 +244,7 @@
       !document.getElementById("ext-loading-overlay")
     ) {
       document.documentElement.appendChild(loadingOverlay);
-      document.documentElement.appendChild(hybridModalOverlay); // 신형 하이브리드 모달 탑재
+      document.documentElement.appendChild(hybridModalOverlay);
       return true;
     }
     return false;
@@ -275,7 +264,6 @@
   let lastClickedUserData = { memberId: "", nickname: "" };
   let currentActiveDogconData = null;
 
-  // ⚡ [모바일 최적화 수정] 수동 유저 차단 모달 렌더링 엔진
   function openBlockModal(nickname, memberId) {
     targetNicknameToBlock = nickname;
     targetMemberIdToBlock = memberId;
@@ -330,7 +318,6 @@
       });
   }
 
-  // ⚡ [모바일 최적화 수정] 유저 메모 관리 모달 렌더링 엔진
   function openUserMemoModal(nickname, memberId, rawMemoData) {
     targetMemoMemberId = memberId;
     let currentMemoText = "";
@@ -350,10 +337,8 @@
           <div class="ext-mob-title">📝 유저 메모 관리</div>
           <p style="font-size:13px; color:#4b5563; margin-bottom:10px;"><strong>${nickname}</strong> 유저에 대한 고유 메모를 적어주세요.</p>
           <input type="text" id="ext-user-memo-modal-input" class="ext-mob-input" placeholder="메모 내용 입력..." value="${currentMemoText}" autocomplete="off">
-          
           <p style="font-size: 11px; font-weight: bold; color: #64748b; margin: 4px 0 6px 0;">🎨 배지 레이블 색상 선택</p>
           <div id="ext-mob-color-box" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;"></div>
-
           <div class="ext-mob-btn-group">
               <button class="ext-mob-btn ext-mob-btn-danger" id="ext-mob-memo-delete" style="margin-right:auto; display:${currentMemoText ? "block" : "none"};">삭제</button>
               <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-memo-cancel">취소</button>
@@ -361,7 +346,6 @@
           </div>
       `;
 
-    // 모바일 원 UI용 컬러 피커 팔레트 동적 구축
     const colors = [
       { k: "blue", c: "#3b82f6" },
       { k: "green", c: "#10b981" },
@@ -381,18 +365,18 @@
           .forEach((d) => (d.style.borderColor = "transparent"));
         chip.style.borderColor = "#111827";
       });
-      colorBox.appendChild(chip);
+      if (colorBox) colorBox.appendChild(chip);
     });
 
     hybridModalOverlay.style.display = "flex";
-    document.getElementById("ext-user-memo-modal-input").focus();
+    const uInput = document.getElementById("ext-user-memo-modal-input");
+    if (uInput) setTimeout(() => uInput.focus(), 80);
 
     document
       .getElementById("ext-mob-memo-cancel")
       .addEventListener("click", () => {
         hybridModalOverlay.style.display = "none";
       });
-
     document
       .getElementById("ext-mob-memo-delete")
       .addEventListener("click", () => {
@@ -405,7 +389,6 @@
           });
         });
       });
-
     document
       .getElementById("ext-mob-memo-save")
       .addEventListener("click", () => {
@@ -831,7 +814,7 @@
               } else {
                 row.remove();
               }
-            } else if (currentMemberId && memos[currentMemberId]) {
+            } else if (currentMemberId && memos[result.userMemos]) {
               if (
                 authorElement &&
                 !row.querySelector(`.ext-badge-id-${currentMemberId}`)
@@ -1027,7 +1010,9 @@
                       return;
                     }
                     chrome.storage.local.get(["blocked_users"], (res) => {
-                      let currentList = res.blocked_users || [];
+                      let currentList = Array.isArray(res.blocked_users)
+                        ? res.blocked_users
+                        : [];
                       currentList = currentList.filter(
                         (item) =>
                           String(item.member_num) !== String(authorMemberId),
@@ -1210,7 +1195,7 @@
     if (currentActiveDogconData.isGroupBlocked) {
       menu.innerHTML = `<div class="dogcon-menu-item ${groupClass}" id="ext-dogcon-action-group">${groupActionText}</div>${infoMenuItemHtml}`;
     } else {
-      menu.innerHTML = `<div class="dogcon-menu-item ${singleClass}" id="ext-dogcon-action-single">${singleActionText}</div><div class="dogcon-menu-item ${groupClass}" id="ext-dogcon-action-group">${groupActionText}</div>${infoMenuItemHtml}`;
+      menu.innerHTML = `<div class="dogcon-menu-item ${singleClass}" id="ext-dogcon-action-single">${singleActionText}</div><div class="ext-dogcon-action-group" id="ext-dogcon-action-group">${groupActionText}</div>${infoMenuItemHtml}`;
     }
     const menuInfoLink = menu.querySelector('a[href*="mid=dogcon"]');
     if (menuInfoLink) {
@@ -1227,7 +1212,7 @@
     if (groupBtn) groupBtn.addEventListener("click", handleGroupBlockToggle);
   }
 
-  document.addEventListener("click", (event) => {
+  document.body.addEventListener("click", (event) => {
     const menu = document.getElementById("ext-dogcon-menu");
     if (menu) menu.style.display = "none";
     const userLink = event.target.closest("a[class*='member_']");
@@ -1240,7 +1225,6 @@
       }
     }
 
-    // 개드립 본섭 드롭다운 팝업 메뉴 가드 바인딩 (수동 차단/메모 메뉴 연결)
     const targetMenuParent = event.target.closest("#popup_menu_area");
     if (targetMenuParent) {
       handlePopupMenuDetected(targetMenuParent);
