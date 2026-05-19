@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ 크롬 & 사파리 전천후 마스터 통합본
 // @namespace    https://dogdrip.net/
-// @version      1.9.9
+// @version      2.0.1
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
@@ -66,7 +66,7 @@
     };
   }
 
-  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터 (사파리 터치 이벤트 완벽 주입)]
+  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터]
   function injectMobileUIAndStyles() {
     if (isExtensionEnv) return;
     if (document.getElementById("ext-mobile-dashboard-style")) return;
@@ -74,7 +74,7 @@
     const style = document.createElement("style");
     style.id = "ext-mobile-dashboard-style";
     style.innerHTML = `
-            /* 💡 사파리 클릭 바인딩 누수 방지용 CSS 포인터 선언 */
+            /* 사파리 클릭 이벤트 누수 방지용 커서 및 터치 액션 강제 지정 */
             #ext-mobile-setup-trigger, .ext-mob-btn, .ext-mob-kv-del, #ext-mobile-dashboard-close {
                 cursor: pointer !important;
                 touch-action: manipulation !important;
@@ -152,12 +152,10 @@
       });
     }
 
-    // 🎯 [사파리 통합 인터랙션 매니저]: 터치 및 클릭을 동시에 방어하여 씹힘 현상을 완벽히 방지합니다.
     const handleMobileInteraction = (e) => {
       const target = e.target;
       if (!target) return;
 
-      // 1. ⚙️ 톱니바퀴 트리거
       if (target.id === "ext-mobile-setup-trigger") {
         e.preventDefault();
         e.stopPropagation();
@@ -165,7 +163,6 @@
         dashboardOverlay.style.display = "flex";
       }
 
-      // 2. 키워드 추가 버튼
       if (target.id === "ext-mob-kw-add-btn") {
         e.preventDefault();
         e.stopPropagation();
@@ -184,7 +181,6 @@
         });
       }
 
-      // 3. 키워드 삭제 버튼
       if (target.classList.contains("ext-mob-kv-del")) {
         e.preventDefault();
         e.stopPropagation();
@@ -198,7 +194,6 @@
         });
       }
 
-      // 4. 대시보드 완료 버튼
       if (target.id === "ext-mobile-dashboard-close") {
         e.preventDefault();
         e.stopPropagation();
@@ -213,7 +208,6 @@
       }
     };
 
-    // 사파리 모바일 터치 하이브리드 바인딩 안정화
     document.body.addEventListener("click", handleMobileInteraction);
   }
 
@@ -563,7 +557,12 @@
 
           const htmlEl = document.documentElement;
           if (htmlEl) {
-            if (result.contentWidth && result.contentWidth.trim() !== "") {
+            // 🛡️ [핵심 교정]: trim() 호출 전 문자열 존재 유무를 먼저 검증하여 무결성을 확보합니다.
+            if (
+              result.contentWidth &&
+              typeof result.contentWidth === "string" &&
+              result.contentWidth.trim() !== ""
+            ) {
               htmlEl.style.setProperty(
                 "--ext-custom-width",
                 result.contentWidth.trim(),
@@ -841,6 +840,7 @@
                 row.remove();
               }
             } else if (currentMemberId && memos[currentMemberId]) {
+              // 🛡️ [오타 완치] memos[result.userMemos] 오류 영구 해결
               if (
                 authorElement &&
                 !row.querySelector(`.ext-badge-id-${currentMemberId}`)
@@ -969,7 +969,6 @@
                 }
               }
 
-              // 🛡️ [마비 차단 가드]: 구형 innerHTML 덮어쓰기 분기를 제거하고 전역 단일 위임 리스너에 통제권을 양도합니다.
               if (nicknameElement && currentMemberId) {
                 const dropdownMenu = comment.querySelector("ul.dropdown-menu");
                 if (
@@ -1124,7 +1123,11 @@
                 }
               });
           }
-          if (!result.contentWidth || result.contentWidth.trim() === "") {
+          if (
+            !result.contentWidth ||
+            result.contentWidth.trim === "" ||
+            typeof result.contentWidth !== "string"
+          ) {
             document.querySelectorAll(".container").forEach((el) => {
               el.style.maxWidth = "960px";
             });
@@ -1138,12 +1141,11 @@
     });
   }
 
-  // 🛡️ [사파리 통합 마비 극복 위임 파이프라인]: 순정 메뉴 드롭다운 항목을 터치했을 때 수동 모달을 열어주는 종합 연동 장치
+  // 🛡️ [사파리 수동 모달 가로채기 파이프라인]
   document.body.addEventListener("click", (e) => {
     const item = e.target.closest("a");
     if (!item) return;
 
-    // ① 닉네임 박스 메뉴 중 [차단] 누를 때 모바일 모달 강제 매핑
     if (
       (item.textContent.trim() === "차단" ||
         item.classList.contains("ext-block-menu-item")) &&
@@ -1159,7 +1161,6 @@
       );
     }
 
-    // ② 닉네임 박스 메뉴 중 [메모] 누를 때 모바일 모달 강제 매핑
     if (
       item.textContent.startsWith("메모") &&
       item.closest("#popup_menu_area")
