@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ 크롬 & 사파리 전천후 마스터 통합본
 // @namespace    https://dogdrip.net/
-// @version      1.9.7
+// @version      1.9.8
 // @match        *://*.dogdrip.net/*
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
@@ -28,13 +28,13 @@
               let defaultVal = [];
               if (key === "blockMethod") defaultVal = "badge";
               if (key === "userMemos" || key === "keywords") defaultVal = {};
+
               if (Array.isArray(defaultVal)) {
                 result[key] =
                   typeof GM_getValue !== "undefined"
                     ? GM_getValue(key, defaultVal)
                     : defaultVal;
               } else {
-                // JSON 객체 격리 및 파싱 예외 가드
                 let raw =
                   typeof GM_getValue !== "undefined"
                     ? GM_getValue(key, "{}")
@@ -66,7 +66,7 @@
     };
   }
 
-  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터 (이벤트 위임 방식으로 씹힘 버그 완전 격파)]
+  // 🎨 [2단계: 모바일 사파리 전용 UI 인젝터 (사파리 터치 씹힘 버그 완전 격파)]
   function injectMobileUIAndStyles() {
     if (isExtensionEnv) return;
     if (document.getElementById("ext-mobile-dashboard-style")) return;
@@ -74,11 +74,16 @@
     const style = document.createElement("style");
     style.id = "ext-mobile-dashboard-style";
     style.innerHTML = `
+            /* 💡 사파리에서는 cursor: pointer가 찍혀있어야 정상적으로 클릭 이벤트를 부모가 수집합니다. */
+            #ext-mobile-setup-trigger, .ext-mob-btn, .ext-mob-kv-del, #ext-mob-dashboard-close, .ext-inserted-member-block a, .ext-inserted-member-memo-link a {
+                cursor: pointer !important;
+                -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+            }
             #ext-mobile-setup-trigger {
                 position: fixed !important; bottom: 30px !important; right: 30px !important; z-index: 2147483647 !important;
                 width: 54px !important; height: 54px !important; background: #3b82f6 !important; color: #fff !important;
                 border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important;
-                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; cursor: pointer !important; user-select: none !important;
+                font-size: 24px !important; box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important; user-select: none !important;
             }
             .ext-mob-modal-overlay {
                 position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important;
@@ -89,15 +94,15 @@
                 border-radius: 16px !important; box-shadow: 0 12px 30px rgba(0,0,0,0.2) !important; color: #111827 !important; font-family: -apple-system, sans-serif !important;
             }
             .ext-mob-title { font-size: 15px !important; font-weight: 700 !important; margin-bottom: 12px !important; color: #1f2937 !important; display: flex; align-items: center; gap: 6px; }
-            .ext-mob-input { width: 100% !important; padding: 10px 12px !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; font-size: 13px !important; box-sizing: border-box !important; margin-bottom: 12px !important; }
+            .ext-mob-input { width: 100% !important; padding: 10px 12px !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important; font-size: 13px !important; box-sizing: border-box !important; margin-bottom: 12px !important; color: #000 !important; background: #fff !important; }
             .ext-mob-btn-group { display: flex !important; gap: 8px !important; justify-content: flex-end !important; margin-top: 14px !important; }
-            .ext-mob-btn { padding: 9px 15px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 8px !important; cursor: pointer !important; border: none !important; }
+            .ext-mob-btn { padding: 9px 15px !important; font-size: 13px !important; font-weight: 600 !important; border-radius: 8px !important; border: none !important; }
             .ext-mob-btn-primary { background: #3b82f6 !important; color: #fff !important; }
             .ext-mob-btn-secondary { background: #f3f4f6 !important; color: #4b5563 !important; }
             .ext-mob-btn-danger { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
             .ext-mob-kv-list { margin: 8px 0 !important; padding: 0 !important; list-style: none !important; max-height: 140px !important; overflow-y: auto !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; }
-            .ext-mob-kv-list li { padding: 8px 12px !important; border-bottom: 1px solid #f3f4f6 !important; display: flex !important; justify-content: space-between !important; font-size: 13px !important; background: #fff; }
-            .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; cursor: pointer !important; }
+            .ext-mob-kv-list li { padding: 8px 12px !important; border-bottom: 1px solid #f3f4f6 !important; display: flex !important; justify-content: space-between !important; font-size: 13px !important; background: #fff !important; color: #000 !important; }
+            .ext-mob-kv-del { color: #ef4444 !important; font-weight: 700 !important; }
         `;
     document.head.appendChild(style);
 
@@ -125,7 +130,6 @@
         `;
     document.body.appendChild(dashboardOverlay);
 
-    // 🔄 리스트 내부 동적 리로드 헬퍼
     function refreshKeywordUI() {
       chrome.storage.local.get(["keywords", "blockMethod"], (res) => {
         let kws = Array.isArray(res.keywords) ? res.keywords : [];
@@ -147,16 +151,23 @@
       });
     }
 
-    // 🎯 [이벤트 위임 적용]: 전역 단일 리스너 구축으로 사파리 비동기 마크업 지연 이슈 완벽 차단
-    document.body.addEventListener("click", (e) => {
-      if (e.target.id === "ext-mobile-setup-trigger") {
+    // 🎯 [사파리 전용 핵심 교정]: click 외에 모바일용 click 반응성을 강제 보정하기 위해 독립적 리스너로 재결합
+    const handleMobileInteraction = (e) => {
+      const target = e.target;
+      if (!target) return;
+
+      // 1. ⚙️ 톱니바퀴 트리거 터치 시
+      if (target.id === "ext-mobile-setup-trigger") {
         e.preventDefault();
         e.stopPropagation();
         refreshKeywordUI();
         dashboardOverlay.style.display = "flex";
       }
 
-      if (e.target.id === "ext-mob-kw-add-btn") {
+      // 2. 키워드 추가 버튼 터치 시
+      if (target.id === "ext-mob-kw-add-btn") {
+        e.preventDefault();
+        e.stopPropagation();
         const input = document.getElementById("ext-mob-new-kw-input");
         const val = input ? input.value.trim() : "";
         if (!val) return;
@@ -172,8 +183,11 @@
         });
       }
 
-      if (e.target.classList.contains("ext-mob-kv-del")) {
-        const idx = parseInt(e.target.dataset.idx);
+      // 3. 키워드 삭제 버튼 터치 시
+      if (target.classList.contains("ext-mob-kv-del")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = parseInt(target.dataset.idx);
         chrome.storage.local.get(["keywords"], (res) => {
           let kws = Array.isArray(res.keywords) ? res.keywords : [];
           kws.splice(idx, 1);
@@ -183,7 +197,10 @@
         });
       }
 
-      if (e.target.id === "ext-mobile-dashboard-close") {
+      // 4. 대시보드 닫기 버튼 터치 시
+      if (target.id === "ext-mobile-dashboard-close") {
+        e.preventDefault();
+        e.stopPropagation();
         const checkedRadio = dashboardOverlay.querySelector(
           'input[name="mobBlockRadio"]:checked',
         );
@@ -193,9 +210,10 @@
           window.location.reload();
         });
       }
-    });
+    };
 
-    return true;
+    // 사파리 하이브리드 이벤트 리스너 이중 방어막 구축
+    document.body.addEventListener("click", handleMobileInteraction);
   }
 
   if (document.body) {
@@ -225,7 +243,7 @@
   hybridModalOverlay.id = "ext-hybrid-modal-overlay";
   hybridModalOverlay.className = "ext-mob-modal-overlay";
   hybridModalOverlay.style.cssText =
-    "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100002; display: none; align-items: center; justify-content: center;";
+    "position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: rgba(0,0,0,0.5) !important; z-index: 2147483645 !important; display: none !important; align-items: center !important; justify-content: center !important;";
   hybridModalOverlay.innerHTML = `<div class="ext-mob-modal-card" id="ext-hybrid-card-content"></div>`;
 
   function removeLoadingOverlay() {
@@ -268,9 +286,10 @@
     targetNicknameToBlock = nickname;
     targetMemberIdToBlock = memberId;
     const card = document.getElementById("ext-hybrid-card-content");
+    if (!card) return;
     card.innerHTML = `
           <div class="ext-mob-title">🚫 사용자 차단하기</div>
-          <p style="font-size:13px; line-height:1.4; color:#4b5563; margin-bottom:14px;"><strong>${nickname}(${memberId})</strong> 유저를 차단 진형에 추가합니다. 차단 사유(메모)를 기입해 주세요.</p>
+          <p style="font-size:13px; line-height:1.4; color:#4b5563; margin-bottom:14px;"><strong>${nickname}(${memberId})</strong> 유저를 차단 진형에 추가합니다. 차단 사유를 기입해 주세요.</p>
           <input type="text" id="ext-block-reason-input" class="ext-mob-input" placeholder="차단 사유를 간략히 입력하세요..." autocomplete="off">
           <div class="ext-mob-btn-group">
               <button class="ext-mob-btn ext-mob-btn-secondary" id="ext-mob-block-cancel">취소</button>
@@ -281,12 +300,14 @@
 
     document
       .getElementById("ext-mob-block-cancel")
-      .addEventListener("click", () => {
+      .addEventListener("click", (e) => {
+        e.preventDefault();
         hybridModalOverlay.style.display = "none";
       });
     document
       .getElementById("ext-mob-block-confirm")
-      .addEventListener("click", () => {
+      .addEventListener("click", (e) => {
+        e.preventDefault();
         const blockReason = document
           .getElementById("ext-block-reason-input")
           .value.trim();
@@ -333,6 +354,7 @@
     }
 
     const card = document.getElementById("ext-hybrid-card-content");
+    if (!card) return;
     card.innerHTML = `
           <div class="ext-mob-title">📝 유저 메모 관리</div>
           <p style="font-size:13px; color:#4b5563; margin-bottom:10px;"><strong>${nickname}</strong> 유저에 대한 고유 메모를 적어주세요.</p>
@@ -374,12 +396,14 @@
 
     document
       .getElementById("ext-mob-memo-cancel")
-      .addEventListener("click", () => {
+      .addEventListener("click", (e) => {
+        e.preventDefault();
         hybridModalOverlay.style.display = "none";
       });
     document
       .getElementById("ext-mob-memo-delete")
-      .addEventListener("click", () => {
+      .addEventListener("click", (e) => {
+        e.preventDefault();
         chrome.storage.local.get(["userMemos"], (res) => {
           const currentMemos = res.userMemos || {};
           delete currentMemos[targetMemoMemberId];
@@ -391,7 +415,8 @@
       });
     document
       .getElementById("ext-mob-memo-save")
-      .addEventListener("click", () => {
+      .addEventListener("click", (e) => {
+        e.preventDefault();
         const memoText = document
           .getElementById("ext-user-memo-modal-input")
           .value.trim();
@@ -814,7 +839,7 @@
               } else {
                 row.remove();
               }
-            } else if (currentMemberId && memos[result.userMemos]) {
+            } else if (currentMemberId && memos[currentMemberId]) {
               if (
                 authorElement &&
                 !row.querySelector(`.ext-badge-id-${currentMemberId}`)
@@ -953,13 +978,6 @@
                   if (emptyLis.length > 0) {
                     const targetLi = emptyLis[0];
                     targetLi.innerHTML = `<a class="ext-block-menu-item"><span class="ed icon"><i class="fas fa-user-slash"></i></span>차단</a>`;
-                    targetLi
-                      .querySelector("a")
-                      .addEventListener("click", (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openBlockModal(nicknameText, currentMemberId);
-                      });
                   }
                 }
               }
@@ -999,42 +1017,8 @@
 
                 if (blockedMemberIds.includes(authorMemberId)) {
                   blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${grantColor}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-check"></i></span> 차단 해제</a>`;
-                  blockLi.querySelector("a").addEventListener("click", (e) => {
-                    e.preventDefault();
-                    if (
-                      typeof chrome === "undefined" ||
-                      !chrome.runtime ||
-                      !chrome.runtime.id
-                    ) {
-                      window.location.reload();
-                      return;
-                    }
-                    chrome.storage.local.get(["blocked_users"], (res) => {
-                      let currentList = Array.isArray(res.blocked_users)
-                        ? res.blocked_users
-                        : [];
-                      currentList = currentList.filter(
-                        (item) =>
-                          String(item.member_num) !== String(authorMemberId),
-                      );
-                      chrome.storage.local.set(
-                        { blocked_users: currentList },
-                        () => {
-                          window.location.reload();
-                        },
-                      );
-                    });
-                  });
                 } else {
                   blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${blockColor}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-slash"></i></span> 차단</a>`;
-                  blockLi.querySelector("a").addEventListener("click", (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openBlockModal(
-                      authorElement.textContent.trim(),
-                      authorMemberId,
-                    );
-                  });
                 }
                 dropdownMenu.insertBefore(blockLi, dropdownMenu.firstChild);
               }
@@ -1073,26 +1057,8 @@
               blockDiv.dataset.alt = alt;
               blockDiv.dataset.isSingleBlocked = isSingleBlocked;
               blockDiv.dataset.isGroupBlocked = isGroupBlocked;
-              blockDiv.addEventListener("click", (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                openDogconMenu(e, blockDiv, true);
-              });
               img.parentNode.insertBefore(blockDiv, img);
               img.remove();
-            } else {
-              img.addEventListener("click", (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const mockDataElement = document.createElement("div");
-                mockDataElement.dataset.srl = srl;
-                mockDataElement.dataset.fileSrl = fileSrl;
-                mockDataElement.dataset.title = title;
-                mockDataElement.dataset.alt = alt;
-                mockDataElement.dataset.isSingleBlocked = false;
-                mockDataElement.dataset.isGroupBlocked = false;
-                openDogconMenu(e, mockDataElement, false);
-              });
             }
           });
 
@@ -1168,198 +1134,47 @@
     });
   }
 
-  function openDogconMenu(e, dataEl, isAlreadyBlocked) {
-    const menu = document.getElementById("ext-dogcon-menu");
-    currentActiveDogconData = {
-      srl: dataEl.dataset.srl,
-      fileSrl: dataEl.dataset.fileSrl,
-      title: dataEl.dataset.title,
-      alt: dataEl.dataset.alt,
-      isSingleBlocked: dataEl.dataset.isSingleBlocked === "true",
-      isGroupBlocked: dataEl.dataset.isGroupBlocked === "true",
-    };
-    const singleActionText = currentActiveDogconData.isSingleBlocked
-      ? "🟢 이 개드립콘 차단 해제"
-      : "❌ 이 개드립콘만 차단";
-    const singleClass = currentActiveDogconData.isSingleBlocked
-      ? "unblock-action"
-      : "block-action";
-    const groupActionText = currentActiveDogconData.isGroupBlocked
-      ? "🟢 이 그룹 전체 차단 해제"
-      : "❌ 이 개드립콘 그룹 전체 차단";
-    const groupClass = currentActiveDogconData.isGroupBlocked
-      ? "unblock-action"
-      : "block-action";
-    const infoUrl = `https://www.dogdrip.net/?mid=dogcon&dogcon_srl=${currentActiveDogconData.srl}`;
-    const infoMenuItemHtml = `<div style="border-top: 1px solid #e2e8f0; margin-top: 4px; padding-top: 4px;"><a href="${infoUrl}" target="_blank" class="dogcon-menu-item" style="text-decoration: none; color: #475569;"><span>🔗 ${currentActiveDogconData.title} 정보</span></a></div>`;
-    if (currentActiveDogconData.isGroupBlocked) {
-      menu.innerHTML = `<div class="dogcon-menu-item ${groupClass}" id="ext-dogcon-action-group">${groupActionText}</div>${infoMenuItemHtml}`;
-    } else {
-      menu.innerHTML = `<div class="dogcon-menu-item ${singleClass}" id="ext-dogcon-action-single">${singleActionText}</div><div class="ext-dogcon-action-group" id="ext-dogcon-action-group">${groupActionText}</div>${infoMenuItemHtml}`;
-    }
-    const menuInfoLink = menu.querySelector('a[href*="mid=dogcon"]');
-    if (menuInfoLink) {
-      menuInfoLink.addEventListener("click", () => {
-        menu.style.display = "none";
-      });
-    }
-    menu.style.left = `${e.pageX}px`;
-    menu.style.top = `${e.pageY}px`;
-    menu.style.display = "block";
-    const singleBtn = document.getElementById("ext-dogcon-action-single");
-    const groupBtn = document.getElementById("ext-dogcon-action-group");
-    if (singleBtn) singleBtn.addEventListener("click", handleSingleBlockToggle);
-    if (groupBtn) groupBtn.addEventListener("click", handleGroupBlockToggle);
-  }
+  // 🎯 [사파리 수동 모달 연동 핵심 보정]: 본섭 원래 메뉴 링크들에 강제로 수동 모달 오픈 이벤트를 가로채 가로막습니다.
+  document.body.addEventListener("click", (e) => {
+    const item = e.target.closest("a");
+    if (!item) return;
 
-  document.body.addEventListener("click", (event) => {
-    const menu = document.getElementById("ext-dogcon-menu");
-    if (menu) menu.style.display = "none";
-    const userLink = event.target.closest("a[class*='member_']");
-    if (userLink) {
-      const nickname = userLink.textContent.trim();
-      const match = userLink.className.match(/member_(\d+)/);
-      if (match) {
-        lastClickedUserData.memberId = match[1];
-        lastClickedUserData.nickname = nickname;
-      }
+    // 개드립 순정 메뉴 내부의 차단 글자를 감지했을 때
+    if (
+      item.textContent.trim() === "차단" &&
+      item.closest("#popup_menu_area")
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      const popupMenuArea = document.getElementById("popup_menu_area");
+      if (popupMenuArea) popupMenuArea.style.display = "none"; // 순정 메뉴 상자 숨기기
+      openBlockModal(
+        lastClickedUserData.nickname,
+        lastClickedUserData.memberId,
+      );
     }
 
-    const targetMenuParent = event.target.closest("#popup_menu_area");
-    if (targetMenuParent) {
-      handlePopupMenuDetected(targetMenuParent);
-    }
-  });
+    // 개드립 순정 메뉴 내부의 메모 글자를 감지했을 때
+    if (
+      item.textContent.startsWith("메모") &&
+      item.closest("#popup_menu_area")
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      const popupMenuArea = document.getElementById("popup_menu_area");
+      if (popupMenuArea) popupMenuArea.style.display = "none";
 
-  function handleSingleBlockToggle() {
-    if (!currentActiveDogconData) return;
-    const targetId = currentActiveDogconData.fileSrl;
-    const targetName = `${currentActiveDogconData.title}(${currentActiveDogconData.alt})`;
-    chrome.storage.local.get(["blockedDogcons"], (result) => {
-      let list = result.blockedDogcons || [];
-      if (currentActiveDogconData.isSingleBlocked) {
-        list = list.filter((item) => item.id !== targetId);
-      } else {
-        if (!list.some((item) => item.id === targetId)) {
-          list.push({ id: targetId, name: targetName });
-        }
-      }
-      chrome.storage.local.set({ blockedDogcons: list }, () => {
-        window.location.reload();
-      });
-    });
-  }
-
-  function handleGroupBlockToggle() {
-    if (!currentActiveDogconData) return;
-    const targetId = currentActiveDogconData.srl;
-    const targetName = currentActiveDogconData.title;
-    chrome.storage.local.get(["blockedDogconGroups"], (result) => {
-      let list = result.blockedDogconGroups || [];
-      if (currentActiveDogconData.isGroupBlocked) {
-        list = list.filter((item) => item.id !== targetId);
-      } else {
-        if (!list.some((item) => item.id === targetId)) {
-          list.push({ id: targetId, name: targetName });
-        }
-      }
-      chrome.storage.local.set({ blockedDogconGroups: list }, () => {
-        window.location.reload();
-      });
-    });
-  }
-
-  function handlePopupMenuDetected(popupElement) {
-    const currentDisplay = window.getComputedStyle(popupElement).display;
-    if (currentDisplay === "none") return;
-    if (lastClickedUserData.memberId) {
-      chrome.storage.local.get(["blocked_users", "userMemos"], (result) => {
-        if (chrome.runtime?.lastError || !chrome.runtime || !chrome.runtime.id)
-          return;
-        const list = Array.isArray(result.blocked_users)
-          ? result.blocked_users
-          : [];
-        const memos = result.userMemos || {};
-        const isAlreadyBlocked = list.some(
-          (item) =>
-            String(item.member_num) === String(lastClickedUserData.memberId),
-        );
+      chrome.storage.local.get(["userMemos"], (res) => {
+        const memos = res.userMemos || {};
         const currentMemoData = memos[lastClickedUserData.memberId] || "";
-        insertMemberMenu(
-          lastClickedUserData.memberId,
+        openUserMemoModal(
           lastClickedUserData.nickname,
-          isAlreadyBlocked,
+          lastClickedUserData.memberId,
           currentMemoData,
         );
       });
     }
-  }
-
-  function insertMemberMenu(
-    memberId,
-    nickname,
-    isAlreadyBlocked,
-    currentMemoData,
-  ) {
-    const popupMenuParentEl = document.getElementById("popup_menu_area");
-    if (!popupMenuParentEl) return;
-    const popupMenuEl = popupMenuParentEl.querySelector("ul");
-    if (!popupMenuEl) return;
-    popupMenuEl
-      .querySelectorAll(
-        ".ext-inserted-member-block, .ext-inserted-member-memo-link",
-      )
-      .forEach((el) => el.remove());
-    let pureMemoText = currentMemoData.includes(":")
-      ? currentMemoData.split(":")[0]
-      : currentMemoData;
-    const memoLi = document.createElement("li");
-    memoLi.className = "ext-inserted-member-memo-link";
-    const memoSuffix =
-      pureMemoText !== ""
-        ? ` <span style="font-weight:normal; font-size:11px; color:#64748b;">(${pureMemoText.length > 8 ? pureMemoText.slice(0, 8) + "..." : pureMemoText})</span>`
-        : "";
-    memoLi.innerHTML = `<a href="#" style="color: #0284c7; font-weight: bold;">메모${memoSuffix}</a>`;
-    memoLi.querySelector("a").addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      popupMenuParentEl.style.display = "none";
-      openUserMemoModal(nickname, memberId, currentMemoData);
-    });
-
-    const blockItem = document.createElement("li");
-    blockItem.className = "ext-inserted-member-block";
-    if (isAlreadyBlocked) {
-      blockItem.innerHTML = `<a href="#" style="color: #${grantColor}; font-weight: bold;">차단 해제</a>`;
-      blockItem.querySelector("a").addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        popupMenuParentEl.style.display = "none";
-        chrome.storage.local.get(["blocked_users"], (res) => {
-          if (chrome.runtime?.lastError) return;
-          let currentList = Array.isArray(res.blocked_users)
-            ? res.blocked_users
-            : [];
-          currentList = currentList.filter(
-            (item) => String(item.member_num) !== String(memberId),
-          );
-          chrome.storage.local.set({ blocked_users: currentList }, () => {
-            window.location.reload();
-          });
-        });
-      });
-    } else {
-      blockItem.innerHTML = `<a href="#" style="color: #${blockColor}; font-weight: bold;">차단</a>`;
-      blockItem.querySelector("a").addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        popupMenuParentEl.style.display = "none";
-        openBlockModal(nickname, memberId);
-      });
-    }
-    popupMenuEl.appendChild(memoLi);
-    popupMenuEl.appendChild(blockItem);
-  }
+  });
 
   const popupObserver = new MutationObserver((mutationsList) => {
     for (const mutation of mutationsList) {
