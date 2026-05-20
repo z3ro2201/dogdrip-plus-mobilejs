@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.6
+// @version      1.1.8
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -677,7 +677,7 @@
    * 8. 메인 필터 실행
    * ========================================================================= */
   function executeFilter() {
-    const minDelay = new Promise((r) => setTimeout(r, 800));
+    const minDelay = new Promise((r) => setTimeout(r, 200));
     const work = Store.get([
       "keywords",
       "blocked_users",
@@ -811,11 +811,25 @@
           handleUserEl(li, nickEl, mid, mid && blockedIds.includes(mid), true);
         });
 
-      // ③ 테이블형 (원본 PC 로직 동일)
-      document.querySelectorAll("tr.ed").forEach((row) => {
+      // ③ 테이블형
+      // 개드립 PC: tr.ed  /  모바일: tr.ed 혹은 다른 래퍼일 수 있으므로 두 패턴 모두 커버
+      const trRows = [
+        ...document.querySelectorAll("tr.ed"),
+        // 모바일에서 tr 없이 div 래퍼로 렌더링되는 경우 대비
+        ...document.querySelectorAll("li.ed:not(.webzine), div.ed.board-item"),
+      ];
+      trRows.forEach((row) => {
+        // 이미 차단/블라인드 처리된 행은 스킵, 단순 스캔만 된 행은 재처리 허용
+        if (row.dataset.extFiltered) return;
+
         const titleEl = row.querySelector(".title");
-        // .author 한정 대신 row 전체에서 탐색 (원본과 동일)
-        const authEl = row.querySelector("a[class*='member_']");
+
+        // 작성자 링크 — 우선순위: .author 안 > td 안 > row 전체
+        const authEl =
+          row.querySelector(".author a[class*='member_']") ||
+          row.querySelector("td a[class*='member_']") ||
+          row.querySelector("a[class*='member_']");
+
         let shouldRemove = false;
         let shouldBlind = false;
 
@@ -858,7 +872,6 @@
         }
 
         if (shouldBlind) {
-          // 차단 사유 배지
           if (mid && authEl && !row.querySelector(`.ext-badge-id-${mid}`)) {
             const u = blockedUsers.find(
               (x) => String(x.member_num) === String(mid),
@@ -875,7 +888,12 @@
           row.dataset.extFiltered = "true";
           if (isBlind) {
             const h = row.innerHTML;
-            row.innerHTML = `<td colspan="6" style="padding:0;">${buildBlindHTML("게시글", `<table><tr>${h}</tr></table>`)}</td>`;
+            // tr인 경우 td로 감싸야 유효한 HTML, 아닌 경우 그대로
+            if (row.tagName === "TR") {
+              row.innerHTML = `<td colspan="10" style="padding:0;">${buildBlindHTML("게시글", `<table><tbody><tr>${h}</tr></tbody></table>`)}</td>`;
+            } else {
+              row.innerHTML = buildBlindHTML("게시글", h);
+            }
             bindBlindToggles(row);
           } else {
             row.remove();
@@ -2083,7 +2101,7 @@
   }
 
   // ── 버전 체크 (GitHub version.txt)
-  const CURRENT_VERSION = "1.1.6";
+  const CURRENT_VERSION = "1.1.8";
   const VERSION_URL =
     "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
 
@@ -2121,12 +2139,49 @@
   if (document.body) startObserver();
   else document.addEventListener("DOMContentLoaded", startObserver);
 
-  if (
-    document.readyState === "interactive" ||
-    document.readyState === "complete"
-  )
-    executeFilter();
-  else document.addEventListener("DOMContentLoaded", executeFilter);
+  // ── 필터 실행 타이밍
+  // 개드립은 XE 기반 동적 렌더링 → DOMContentLoaded만으론 tr.ed가 없을 수 있음
+  // 1) 최초 실행: DOM 준비되면 즉시
+  // 2) 재실행: tr.ed / li.webzine 등이 새로 추가될 때마다 (MutationObserver)
+  let _filterTimer = null;
+  function scheduleFilter(delay = 120) {
+    clearTimeout(_filterTimer);
+    _filterTimer = setTimeout(executeFilter, delay);
+  }
 
-  window.addEventListener("load", removeLoadingOverlay);
+  // 최초 실행
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => scheduleFilter(300));
+  } else {
+    scheduleFilter(100);
+  }
+
+  // 동적 콘텐츠 감지 — tr.ed / li.webzine / li.ed 가 새로 추가되면 재실행
+  const _contentObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        const hasRows =
+          node.matches?.("tr.ed, li.webzine, li.ed, div.ed.board-item") ||
+          node.querySelector?.("tr.ed, li.webzine, li.ed, div.ed.board-item");
+        if (hasRows) {
+          scheduleFilter(80);
+          return;
+        }
+      }
+    }
+  });
+
+  function startContentObserver() {
+    _contentObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.body) startContentObserver();
+  else document.addEventListener("DOMContentLoaded", startContentObserver);
+
+  window.addEventListener("load", () => {
+    removeLoadingOverlay();
+    // load 이후 한 번 더 — XE가 load 이후 렌더링 완료하는 경우 대비
+    scheduleFilter(500);
+  });
 })();
