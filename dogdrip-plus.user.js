@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.5
+// @version      1.1.6
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -29,49 +29,95 @@
    * ========================================================================= */
   const LS_PREFIX = "ddplus_";
 
+  // 값을 안전하게 파싱 — 이미 객체면 그대로, 문자열이면 JSON.parse
+  function _safeParse(r) {
+    if (r === null || r === undefined) return undefined;
+    if (typeof r === "string") {
+      try {
+        return JSON.parse(r);
+      } catch {
+        return r;
+      }
+    }
+    return r; // 이미 객체/배열인 경우 (GM.getValue가 그대로 반환할 때)
+  }
+
+  // 값을 항상 문자열로 직렬화 — 이미 문자열이면 그대로
+  function _safeStringify(v) {
+    if (typeof v === "string") return v;
+    return JSON.stringify(v);
+  }
+
   const _backend = (() => {
-    // ── Tampermonkey / Violentmonkey 계열 (동기 GM_*)
+    // ── Tampermonkey / Violentmonkey (동기 GM_*)
     if (typeof GM_getValue === "function") {
       return {
         async get(key) {
-          const r = GM_getValue(key, null);
-          return r !== null ? JSON.parse(r) : undefined;
+          try {
+            return _safeParse(GM_getValue(key, null));
+          } catch (e) {
+            console.warn("[개드립Plus] GM_getValue 오류:", key, e);
+            return undefined;
+          }
         },
         async set(key, val) {
-          GM_setValue(key, JSON.stringify(val));
+          try {
+            GM_setValue(key, _safeStringify(val));
+          } catch (e) {
+            console.warn("[개드립Plus] GM_setValue 오류:", key, e);
+          }
         },
         async remove(key) {
-          GM_deleteValue(key);
+          try {
+            GM_deleteValue(key);
+          } catch {}
         },
       };
     }
-    // ── Userscripts iOS / 일부 확장 (Promise GM.*)
+    // ── Userscripts iOS / Promise GM.*
     if (typeof GM !== "undefined" && typeof GM.getValue === "function") {
       return {
         async get(key) {
-          const r = await GM.getValue(key, null);
-          return r !== null ? JSON.parse(r) : undefined;
+          try {
+            return _safeParse(await GM.getValue(key, null));
+          } catch (e) {
+            console.warn("[개드립Plus] GM.getValue 오류:", key, e);
+            return undefined;
+          }
         },
         async set(key, val) {
-          await GM.setValue(key, JSON.stringify(val));
+          try {
+            await GM.setValue(key, _safeStringify(val));
+          } catch (e) {
+            console.warn("[개드립Plus] GM.setValue 오류:", key, e);
+          }
         },
         async remove(key) {
-          await GM.deleteValue(key);
+          try {
+            await GM.deleteValue(key);
+          } catch {}
         },
       };
     }
-    // ── 최후 폴백: localStorage (기기/앱 재설치 시 유실 주의)
-    console.warn("[개드립Plus] GM API 없음 → localStorage 폴백 사용");
+    // ── 최후 폴백: localStorage
+    console.warn("[개드립Plus] GM API 없음 → localStorage 폴백");
     return {
       async get(key) {
-        const r = localStorage.getItem(LS_PREFIX + key);
-        return r !== null ? JSON.parse(r) : undefined;
+        try {
+          return _safeParse(localStorage.getItem(LS_PREFIX + key));
+        } catch {
+          return undefined;
+        }
       },
       async set(key, val) {
-        localStorage.setItem(LS_PREFIX + key, JSON.stringify(val));
+        try {
+          localStorage.setItem(LS_PREFIX + key, _safeStringify(val));
+        } catch {}
       },
       async remove(key) {
-        localStorage.removeItem(LS_PREFIX + key);
+        try {
+          localStorage.removeItem(LS_PREFIX + key);
+        } catch {}
       },
     };
   })();
@@ -82,7 +128,9 @@
       const result = {};
       await Promise.all(
         list.map(async (k) => {
-          result[k] = await _backend.get(k);
+          const v = await _backend.get(k);
+          // undefined가 아닌 경우만 result에 넣음 (|| [] 기본값 로직이 동작하도록)
+          if (v !== undefined) result[k] = v;
         }),
       );
       return result;
@@ -660,6 +708,7 @@
       console.log(
         "[개드립Plus] 필터 실행 — 차단유저:",
         blockedIds.length,
+        blockedIds,
         "/ 키워드:",
         filterKW.length,
         "/ 방식:",
@@ -2034,7 +2083,7 @@
   }
 
   // ── 버전 체크 (GitHub version.txt)
-  const CURRENT_VERSION = "1.1.5";
+  const CURRENT_VERSION = "1.1.6";
   const VERSION_URL =
     "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
 
