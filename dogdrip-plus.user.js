@@ -473,6 +473,7 @@
     /* \uAC8C\uC2DC\uAE00 \uB0B4\uBD80 \u2014 \uBCF8\uBB38 \uC81C\uC678 \uC228\uAE40 */
     html.ext-reader-mode .wgtRv { display: none !important; }
     html.ext-reader-mode .ed.article-toolbar { display: none !important; }
+    html.ext-reader-mode .ed.article-head .title-toolbar .ed.flex.flex-wrap,
     html.ext-reader-mode .ed.article-head .title-toolbar .ed.flex.flex-right { display: none !important; }
     html.ext-reader-mode .ed.clearfix.margin-vertical-large > .ed.flex.flex-right,
     html.ext-reader-mode .ed.clearfix.margin-vertical-large > .ed.flex.flex-left.flex-middle { display: none !important; }
