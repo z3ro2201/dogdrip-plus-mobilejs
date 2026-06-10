@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.16
+// @version      1.1.13
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -14,8 +14,8 @@
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // ==/UserScript==
 
-"use strict";
-(() => {
+(function () {
+  "use strict";
   // src/mobile/storage.ts
   var LS_PREFIX = "ddplus_";
   function _safeParse(r) {
@@ -825,7 +825,7 @@
       </div>
       <div class="ext-tab-bar">
         <button class="ext-tab active" data-tab="tab-block-user">\u{1F464} \uC0AC\uC6A9\uC790\uCC28\uB2E8</button>
-        <button class="ext-tab" data-tab="tab-keyword">\u2328\uFE0F \uD0A4\uC6CC\uB4DC\uCC28\uB2E8</button>
+        <button class="ext-tab" data-tab="tab-keyword">\u{1F511} \uD0A4\uC6CC\uB4DC\uCC28\uB2E8</button>
         <button class="ext-tab" data-tab="tab-dogcon">\u{1F436} \uAC1C\uB4DC\uB9BD\uCF58</button>
         <button class="ext-tab" data-tab="tab-memo">\u{1F4DD} \uBA54\uBAA8</button>
         <button class="ext-tab" data-tab="tab-display">\u{1F5A5} \uD45C\uC2DC</button>
@@ -896,14 +896,14 @@
           <button class="ext-backup-btn" id="s-restore-btn">\u2B06\uFE0F \uBC31\uC5C5 \uBCF5\uAD6C</button>
         </div>
         <input type="file" id="s-restore-file" accept=".json" style="display:none;" />
-        <p class="ext-section-label" style="margin-top:18px;">Dogdrip++ \uBC31\uC5C5\uBCF8 \uBCF5\uC6D0</p>
+        <p class="ext-section-label" style="margin-top:18px;">Dogdrip++ \uBC31\uC5C5 \uC774\uAD00</p>
         <div class="ext-backup-row">
-          <button class="ext-backup-btn" id="s-restore-pp-btn" style="border-color:#f59e0b;color:#b45309;">\u{1F4E5} Dogdrip++ \uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30</button>
+          <button class="ext-backup-btn" id="s-restore-pp-btn" style="border-color:#f59e0b;color:#b45309;">\u{1F4E5} Dogdrip++ \uBC31\uC5C5\uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30</button>
         </div>
         <input type="file" id="s-restore-pp-file" accept=".json" style="display:none;" />
         <p style="margin-top:16px;font-size:12px;color:#94a3b8; line-height:1.7;">
           \uBC31\uC5C5 \uD30C\uC77C\uC740 JSON \uD615\uC2DD\uC73C\uB85C \uC800\uC7A5\uB418\uBA70, \uB3D9\uC77C \uC720\uC800\uC2A4\uD06C\uB9BD\uD2B8 \uD658\uACBD\uC5D0\uC11C \uBCF5\uAD6C \uAC00\uB2A5\uD569\uB2C8\uB2E4.<br>
-          Dogdrip++ \uB370\uC774\uD130 \uBCF5\uC6D0 \uC2DC \uCC28\uB2E8 \uC720\uC800\xB7\uD0A4\uC6CC\uB4DC\uB9CC \uAC00\uC838\uC624\uBA70, \uB098\uBA38\uC9C0 \uD604\uC7AC \uC124\uC815\uC740 \uC720\uC9C0\uB429\uB2C8\uB2E4.<br>
+          Dogdrip++ \uB370\uC774\uD130 \uC774\uAD00 \uC2DC \uCC28\uB2E8 \uC720\uC800\xB7\uD0A4\uC6CC\uB4DC\uB9CC \uAC00\uC838\uC624\uBA70, \uB098\uBA38\uC9C0 \uD604\uC7AC \uC124\uC815\uC740 \uC720\uC9C0\uB429\uB2C8\uB2E4.<br>
           \u203B \uC124\uC815 \uBCC0\uACBD \uD6C4 \uD398\uC774\uC9C0 \uC0C8\uB85C\uACE0\uCE68 \uC2DC \uBC18\uC601\uB429\uB2C8\uB2E4.
         </p>
       </div>
@@ -1380,7 +1380,7 @@
             userMemos: cur.userMemos || {}
           }).then(() => {
             alert(
-              `\u{1F389} Dogdrip++ \uB370\uC774\uD130 \uBCF5\uC6D0 \uC644\uB8CC!
+              `\u{1F389} Dogdrip++ \uB370\uC774\uD130 \uC774\uAD00 \uC644\uB8CC!
 \uCC28\uB2E8 \uC720\uC800 ${blocked_users.length}\uBA85, \uD0A4\uC6CC\uB4DC ${keywords.length}\uAC1C\uB97C \uAC00\uC838\uC654\uC2B5\uB2C8\uB2E4.
 \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4.`
             );
@@ -2230,7 +2230,7 @@
   // src/mobile/main.ts
   (function() {
     "use strict";
-    const CURRENT_VERSION = "1.1.16";
+    const CURRENT_VERSION = "1.1.13";
     const VERSION_URL = "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
     const storage = new MobileStorage();
     injectMobileCSS();
@@ -2822,4 +2822,5 @@
       bindContentImageGallery();
     });
   })();
+
 })();
