@@ -1,20 +1,230 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.15
+// @version      1.1.16
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
 // @grant        GM.getValue
 // @grant        GM.setValue
 // @grant        GM.deleteValue
-// @run-at       document-idle
+// @run-at       document-start
 // @connect      raw.githubusercontent.com
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // ==/UserScript==
 
-"use strict";(()=>{var se="ddplus_";function fe(t){if(t!=null){if(typeof t=="string")try{return JSON.parse(t)}catch{return t}return t}}function xe(t){return typeof t=="string"?t:JSON.stringify(t)}var de=typeof GM<"u"&&typeof GM.getValue=="function"?{async get(t){try{return fe(await GM.getValue(t,null))}catch(o){console.warn("[\uAC1C\uB4DC\uB9BDPlus] GM.getValue \uC624\uB958:",t,o);return}},async set(t,o){try{await GM.setValue(t,xe(o))}catch(r){console.warn("[\uAC1C\uB4DC\uB9BDPlus] GM.setValue \uC624\uB958:",t,r)}},async remove(t){try{await GM.deleteValue(t)}catch{}}}:(console.warn("[\uAC1C\uB4DC\uB9BDPlus] GM API \uC5C6\uC74C \u2192 localStorage \uD3F4\uBC31"),{async get(t){try{return fe(localStorage.getItem(se+t))}catch{return}},async set(t,o){try{localStorage.setItem(se+t,xe(o))}catch{}},async remove(t){try{localStorage.removeItem(se+t)}catch{}}}),oe=class{async get(o){let r=Array.isArray(o)?o:[o],n={};return await Promise.all(r.map(async f=>{let i=await de.get(f);i!==void 0&&(n[f]=i)})),n}async set(o){await Promise.all(Object.entries(o).map(([r,n])=>de.set(r,n)))}async remove(o){await de.remove(o)}};function ze(){let t=document.querySelector('[class*="rhymix_content"][class*="xe_content"]');return t?Array.from(t.querySelectorAll("img")).filter(o=>{if(o.classList.contains("dogcon-clickable")||o.hasAttribute("data-dogcon-srl")||o.hasAttribute("data-dogcon-file-srl")||o.naturalWidth>0&&o.naturalWidth<=32||o.width>0&&o.width<=32)return!1;let r=o.getAttribute("src")||o.src;return!(!r||r.startsWith("data:"))}).map(o=>{let r=new URL(o.getAttribute("src")||o.src,location.origin).href,n=decodeURIComponent(r.split("/").pop()?.split("?")[0]||r);return{src:r,filename:n}}):[]}var $=0,j=[],T=null,ge=!1;function he(){let t=document.querySelector('[class*="rhymix_content"][class*="xe_content"]');if(!t)return;let o=Array.from(t.querySelectorAll("img")).filter(r=>{if(r.classList.contains("dogcon-clickable")||r.hasAttribute("data-dogcon-srl")||r.hasAttribute("data-dogcon-file-srl")||r.naturalWidth>0&&r.naturalWidth<=32||r.width>0&&r.width<=32)return!1;let n=r.getAttribute("src")||r.src;return!(!n||n.startsWith("data:"))});o.length&&o.forEach((r,n)=>{r.dataset.extGalleryBound||(r.dataset.extGalleryBound="true",r.style.cursor="zoom-in",r.addEventListener("click",f=>{f.preventDefault(),f.stopPropagation();let i=ze();Oe(i,n)}))})}function Oe(t,o){t.length&&(j=t,$=o,T||(T=Re(),document.body.appendChild(T)),ge||(Ge(),ge=!0),Pe(),T.style.display="flex",document.body.style.overflow="hidden",ye())}function ce(){T&&(T.style.display="none"),document.body.style.overflow=""}function Z(t){$=(t+j.length)%j.length,ye()}function ye(){if(!T)return;let t=j[$];T.querySelector("#ext-gallery-main-img").src=t.src,T.querySelector("#ext-gallery-filename").textContent=t.filename,T.querySelector("#ext-gallery-counter").textContent=`${$+1} / ${j.length}`,T.querySelectorAll(".ext-gallery-thumb").forEach((f,i)=>{f.classList.toggle("active",i===$),i===$&&f.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"})});let o=T.querySelector("#ext-gallery-prev"),r=T.querySelector("#ext-gallery-next"),n=j.length<=1;o.style.visibility=n?"hidden":"visible",r.style.visibility=n?"hidden":"visible"}function Pe(){if(!T)return;let t=T.querySelector("#ext-gallery-strip");t.innerHTML="",j.forEach((o,r)=>{let n=document.createElement("img");n.src=o.src,n.className="ext-gallery-thumb",n.alt=o.filename,n.title=o.filename,n.addEventListener("click",()=>Z(r)),t.appendChild(n)})}function Re(){if(!document.getElementById("ext-gallery-style")){let o=document.createElement("style");o.id="ext-gallery-style",o.textContent=`
+"use strict";
+(() => {
+  // src/mobile/storage.ts
+  var LS_PREFIX = "ddplus_";
+  function _safeParse(r) {
+    if (r === null || r === void 0) return void 0;
+    if (typeof r === "string") {
+      try {
+        return JSON.parse(r);
+      } catch {
+        return r;
+      }
+    }
+    return r;
+  }
+  function _safeStringify(v) {
+    if (typeof v === "string") return v;
+    return JSON.stringify(v);
+  }
+  var _backend = (() => {
+    if (typeof GM !== "undefined" && typeof GM.getValue === "function") {
+      return {
+        async get(key) {
+          try {
+            return _safeParse(await GM.getValue(key, null));
+          } catch (e) {
+            console.warn("[\uAC1C\uB4DC\uB9BDPlus] GM.getValue \uC624\uB958:", key, e);
+            return void 0;
+          }
+        },
+        async set(key, val) {
+          try {
+            await GM.setValue(key, _safeStringify(val));
+          } catch (e) {
+            console.warn("[\uAC1C\uB4DC\uB9BDPlus] GM.setValue \uC624\uB958:", key, e);
+          }
+        },
+        async remove(key) {
+          try {
+            await GM.deleteValue(key);
+          } catch {
+          }
+        }
+      };
+    }
+    console.warn("[\uAC1C\uB4DC\uB9BDPlus] GM API \uC5C6\uC74C \u2192 localStorage \uD3F4\uBC31");
+    return {
+      async get(key) {
+        try {
+          return _safeParse(localStorage.getItem(LS_PREFIX + key));
+        } catch {
+          return void 0;
+        }
+      },
+      async set(key, val) {
+        try {
+          localStorage.setItem(LS_PREFIX + key, _safeStringify(val));
+        } catch {
+        }
+      },
+      async remove(key) {
+        try {
+          localStorage.removeItem(LS_PREFIX + key);
+        } catch {
+        }
+      }
+    };
+  })();
+  var MobileStorage = class {
+    async get(keys) {
+      const list = Array.isArray(keys) ? keys : [keys];
+      const result = {};
+      await Promise.all(
+        list.map(async (k) => {
+          const v = await _backend.get(k);
+          if (v !== void 0) result[k] = v;
+        })
+      );
+      return result;
+    }
+    async set(obj) {
+      await Promise.all(Object.entries(obj).map(([k, v]) => _backend.set(k, v)));
+    }
+    async remove(key) {
+      await _backend.remove(key);
+    }
+  };
+
+  // src/extension/imageGallery.ts
+  function collectContentImages() {
+    const contentEl = document.querySelector(
+      '[class*="rhymix_content"][class*="xe_content"]'
+    );
+    if (!contentEl) return [];
+    return Array.from(contentEl.querySelectorAll("img")).filter((img) => {
+      if (img.classList.contains("dogcon-clickable")) return false;
+      if (img.hasAttribute("data-dogcon-srl")) return false;
+      if (img.hasAttribute("data-dogcon-file-srl")) return false;
+      if (img.naturalWidth > 0 && img.naturalWidth <= 32) return false;
+      if (img.width > 0 && img.width <= 32) return false;
+      const src = img.getAttribute("src") || img.src;
+      if (!src || src.startsWith("data:")) return false;
+      return true;
+    }).map((img) => {
+      const src = new URL(img.getAttribute("src") || img.src, location.origin).href;
+      const filename = decodeURIComponent(
+        src.split("/").pop()?.split("?")[0] || src
+      );
+      return { src, filename };
+    });
+  }
+  var _currentIdx = 0;
+  var _images = [];
+  var _overlayEl = null;
+  var _bound = false;
+  function bindContentImageGallery() {
+    const contentEl = document.querySelector(
+      '[class*="rhymix_content"][class*="xe_content"]'
+    );
+    if (!contentEl) return;
+    const imgs = Array.from(
+      contentEl.querySelectorAll("img")
+    ).filter((img) => {
+      if (img.classList.contains("dogcon-clickable")) return false;
+      if (img.hasAttribute("data-dogcon-srl")) return false;
+      if (img.hasAttribute("data-dogcon-file-srl")) return false;
+      if (img.naturalWidth > 0 && img.naturalWidth <= 32) return false;
+      if (img.width > 0 && img.width <= 32) return false;
+      const src = img.getAttribute("src") || img.src;
+      if (!src || src.startsWith("data:")) return false;
+      return true;
+    });
+    if (!imgs.length) return;
+    imgs.forEach((img, idx) => {
+      if (img.dataset.extGalleryBound) return;
+      img.dataset.extGalleryBound = "true";
+      img.style.cursor = "zoom-in";
+      img.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const images = collectContentImages();
+        openGallery(images, idx);
+      });
+    });
+  }
+  function openGallery(images, startIdx) {
+    if (!images.length) return;
+    _images = images;
+    _currentIdx = startIdx;
+    if (!_overlayEl) {
+      _overlayEl = buildOverlay();
+      document.body.appendChild(_overlayEl);
+    }
+    if (!_bound) {
+      bindOverlayEvents();
+      _bound = true;
+    }
+    buildThumbnailStrip();
+    _overlayEl.style.display = "flex";
+    document.body.style.overflow = "hidden";
+    renderFrame();
+  }
+  function closeGallery() {
+    if (_overlayEl) _overlayEl.style.display = "none";
+    document.body.style.overflow = "";
+  }
+  function goTo(idx) {
+    _currentIdx = (idx + _images.length) % _images.length;
+    renderFrame();
+  }
+  function renderFrame() {
+    if (!_overlayEl) return;
+    const img = _images[_currentIdx];
+    _overlayEl.querySelector("#ext-gallery-main-img").src = img.src;
+    _overlayEl.querySelector("#ext-gallery-filename").textContent = img.filename;
+    _overlayEl.querySelector("#ext-gallery-counter").textContent = `${_currentIdx + 1} / ${_images.length}`;
+    _overlayEl.querySelectorAll(".ext-gallery-thumb").forEach((thumb, i) => {
+      thumb.classList.toggle("active", i === _currentIdx);
+      if (i === _currentIdx) {
+        thumb.scrollIntoView({
+          block: "nearest",
+          inline: "center",
+          behavior: "smooth"
+        });
+      }
+    });
+    const prevBtn = _overlayEl.querySelector("#ext-gallery-prev");
+    const nextBtn = _overlayEl.querySelector("#ext-gallery-next");
+    const single = _images.length <= 1;
+    prevBtn.style.visibility = single ? "hidden" : "visible";
+    nextBtn.style.visibility = single ? "hidden" : "visible";
+  }
+  function buildThumbnailStrip() {
+    if (!_overlayEl) return;
+    const strip = _overlayEl.querySelector("#ext-gallery-strip");
+    strip.innerHTML = "";
+    _images.forEach((img, i) => {
+      const thumb = document.createElement("img");
+      thumb.src = img.src;
+      thumb.className = "ext-gallery-thumb";
+      thumb.alt = img.filename;
+      thumb.title = img.filename;
+      thumb.addEventListener("click", () => goTo(i));
+      strip.appendChild(thumb);
+    });
+  }
+  function buildOverlay() {
+    if (!document.getElementById("ext-gallery-style")) {
+      const style = document.createElement("style");
+      style.id = "ext-gallery-style";
+      style.textContent = `
       #ext-gallery-overlay {
         position: fixed; inset: 0;
         background: rgba(0,0,0,0.90);
@@ -162,7 +372,12 @@
         opacity: 1;
         transform: scale(1.08);
       }
-    `,(document.head||document.documentElement).appendChild(o)}let t=document.createElement("div");return t.id="ext-gallery-overlay",t.innerHTML=`
+    `;
+      (document.head || document.documentElement).appendChild(style);
+    }
+    const overlay = document.createElement("div");
+    overlay.id = "ext-gallery-overlay";
+    overlay.innerHTML = `
     <div id="ext-gallery-modal">
       <div id="ext-gallery-header">
         <span id="ext-gallery-filename"></span>
@@ -183,7 +398,49 @@
         <div id="ext-gallery-strip"></div>
       </div>
     </div>
-  `,t}function Ge(){if(!T)return;T.querySelector("#ext-gallery-close").addEventListener("click",ce),T.querySelector("#ext-gallery-prev").addEventListener("click",()=>Z($-1)),T.querySelector("#ext-gallery-next").addEventListener("click",()=>Z($+1));let t=T.querySelector("#ext-gallery-download");T.querySelector("#ext-gallery-main-img").addEventListener("load",()=>{let o=j[$];o&&(t.href=o.src,t.download=o.filename)}),T.addEventListener("click",o=>{o.target===T&&ce()}),document.addEventListener("keydown",o=>{if(!(!T||T.style.display==="none"))switch(o.key){case"ArrowLeft":Z($-1);break;case"ArrowRight":Z($+1);break;case"Escape":case"Esc":ce();break}})}function ve(){if(document.getElementById("ext-mobile-style"))return;let t=document.createElement("style");t.id="ext-mobile-style",t.textContent=`
+  `;
+    return overlay;
+  }
+  function bindOverlayEvents() {
+    if (!_overlayEl) return;
+    _overlayEl.querySelector("#ext-gallery-close").addEventListener("click", closeGallery);
+    _overlayEl.querySelector("#ext-gallery-prev").addEventListener("click", () => goTo(_currentIdx - 1));
+    _overlayEl.querySelector("#ext-gallery-next").addEventListener("click", () => goTo(_currentIdx + 1));
+    const downloadLink = _overlayEl.querySelector(
+      "#ext-gallery-download"
+    );
+    _overlayEl.querySelector("#ext-gallery-main-img").addEventListener("load", () => {
+      const img = _images[_currentIdx];
+      if (!img) return;
+      downloadLink.href = img.src;
+      downloadLink.download = img.filename;
+    });
+    _overlayEl.addEventListener("click", (e) => {
+      if (e.target === _overlayEl) closeGallery();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (!_overlayEl || _overlayEl.style.display === "none") return;
+      switch (e.key) {
+        case "ArrowLeft":
+          goTo(_currentIdx - 1);
+          break;
+        case "ArrowRight":
+          goTo(_currentIdx + 1);
+          break;
+        case "Escape":
+        case "Esc":
+          closeGallery();
+          break;
+      }
+    });
+  }
+
+  // src/mobile/cssInjector.ts
+  function injectMobileCSS() {
+    if (document.getElementById("ext-mobile-style")) return;
+    const style = document.createElement("style");
+    style.id = "ext-mobile-style";
+    style.textContent = `
     /* \u2500\u2500 \uB85C\uB529 \uC624\uBC84\uB808\uC774 \u2500\u2500 */
     #ext-loading-overlay {
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -553,7 +810,14 @@
       font-size: 17px !important;
       line-height: 1.9 !important;
     }
-  `,(document.head||document.documentElement).appendChild(t)}function Ee(){return`
+  `;
+    const targetNode = document.head || document.documentElement;
+    targetNode.appendChild(style);
+  }
+
+  // src/mobile/settingsPanel.ts
+  function buildSettingsPanelHTML() {
+    return `
     <div id="ext-settings-inner">
       <div id="ext-settings-header">
         <h2>\u2699\uFE0F \uAC1C\uB4DC\uB9BD Plus+ <small style="font-size:11px;color:#94a3b8;font-weight:normal;">(Mobile)</small></h2>
@@ -643,19 +907,1343 @@
           \u203B \uC124\uC815 \uBCC0\uACBD \uD6C4 \uD398\uC774\uC9C0 \uC0C8\uB85C\uACE0\uCE68 \uC2DC \uBC18\uC601\uB429\uB2C8\uB2E4.
         </p>
       </div>
-    </div>`}var me=0,ke=!1;function Ve(t,o){me=window.scrollY,document.body.style.cssText+=";overflow:hidden;position:fixed;top:-"+me+"px;left:0;right:0;",o.classList.add("show"),Me("tab-block-user",t),He(t),je(t,o)}function ue(t){t.classList.remove("show"),document.body.style.overflow="",document.body.style.position="",document.body.style.top="",document.body.style.left="",document.body.style.right="",window.scrollTo(0,me)}function we(t,o,r,n,f){o.addEventListener("click",()=>{if(o.classList.contains("has-update")&&window._extLatestVersion&&confirm(`\u{1F195} \uC0C8 \uBC84\uC804\uC774 \uC788\uC2B5\uB2C8\uB2E4!
-\uD604\uC7AC: v${f}  \u2192  \uCD5C\uC2E0: v${window._extLatestVersion}
+    </div>`;
+  }
+  var _savedScrollY = 0;
+  var _displayTogglesBound = false;
+  function openSettingsPanel(storage, settingsPanel) {
+    _savedScrollY = window.scrollY;
+    document.body.style.cssText += ";overflow:hidden;position:fixed;top:-" + _savedScrollY + "px;left:0;right:0;";
+    settingsPanel.classList.add("show");
+    loadPanelData("tab-block-user", storage);
+    loadDisplaySettings(storage);
+    bindDisplayToggles(storage, settingsPanel);
+  }
+  function closeSettingsPanel(settingsPanel) {
+    settingsPanel.classList.remove("show");
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    window.scrollTo(0, _savedScrollY);
+  }
+  function bindGearAndPanel(storage, gearBtn, gearUpdateBadge, settingsPanel, currentVersion) {
+    gearBtn.addEventListener("click", () => {
+      if (gearBtn.classList.contains("has-update") && window._extLatestVersion) {
+        if (confirm(
+          `\u{1F195} \uC0C8 \uBC84\uC804\uC774 \uC788\uC2B5\uB2C8\uB2E4!
+\uD604\uC7AC: v${currentVersion}  \u2192  \uCD5C\uC2E0: v${window._extLatestVersion}
 
-\uC5C5\uB370\uC774\uD2B8 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9\uD560\uAE4C\uC694?`)){window.open("https://github.com/z3ro2201/dogdrip-plus-mobilejs/raw/main/dogdrip-plus.user.js","_blank");return}Ve(t,n)}),n.querySelector("#ext-settings-close")?.addEventListener("click",()=>ue(n)),n.addEventListener("click",i=>{i.target===n&&ue(n)}),n.querySelectorAll(".ext-tab").forEach(i=>{i.addEventListener("click",()=>{n.querySelectorAll(".ext-tab").forEach(E=>E.classList.remove("active")),n.querySelectorAll(".ext-tab-panel").forEach(E=>E.classList.remove("active")),i.classList.add("active");let w=i.dataset.tab;n.querySelector(`#${w}`)?.classList.add("active"),Me(w,t)})}),n.querySelector("#s-kw-add")?.addEventListener("click",()=>{let i=n.querySelector("#s-kw-word").value.trim();if(!i){alert("\uD0A4\uC6CC\uB4DC\uB97C \uC785\uB825\uD558\uC138\uC694.");return}let w=n.querySelector("#s-kw-target").value,E=n.querySelector("#s-kw-method").value;t.get(["keywords"]).then(a=>{let k=a.keywords||[];if(k.some(v=>(v.word||v.keyword)===i)){alert("\uC774\uBBF8 \uB4F1\uB85D\uB41C \uD0A4\uC6CC\uB4DC\uC785\uB2C8\uB2E4.");return}k.push({date:new Date().toISOString().slice(0,10),word:i,method:E,target:w}),t.set({keywords:k}).then(()=>{n.querySelector("#s-kw-word").value="",pe(t)})})}),n.querySelector("#s-backup")?.addEventListener("click",()=>Ue(t)),n.querySelector("#s-restore-btn")?.addEventListener("click",()=>n.querySelector("#s-restore-file").click()),n.querySelector("#s-restore-file")?.addEventListener("change",i=>We(i,t)),n.querySelector("#s-restore-pp-btn")?.addEventListener("click",()=>n.querySelector("#s-restore-pp-file").click()),n.querySelector("#s-restore-pp-file")?.addEventListener("change",i=>Ye(i,t))}function je(t,o){if(ke)return;ke=!0,[["s-hide-notice","hideNotice"],["s-hide-popular","hidePopular"],["s-compact","compactMode"],["s-disable-vote","disableVote"],["s-no-yt","preventYoutubeAlgorithm"],["s-hide-level-icon","hideLevelIcon"]].forEach(([n,f])=>{o.querySelector(`#${n}`)?.addEventListener("change",i=>{let w=i.target.checked;t.set({[f]:w}).then(()=>{t.get(["hideNotice","hidePopular","hideSidebar","compactMode","disableVote"]).then(Fe)})})}),["s-bm-remove","s-bm-blind","s-bm-badge"].forEach(n=>{o.querySelector(`#${n}`)?.addEventListener("change",f=>{f.target.checked&&t.set({blockMethod:f.target.value}).then(()=>{ue(o),location.reload()})})})}function Me(t,o){switch(t){case"tab-block-user":Se(o);break;case"tab-keyword":pe(o);break;case"tab-dogcon":Te(o);break;case"tab-memo":_e(o);break;case"tab-display":He(o);break}}function Se(t){t.get(["blocked_users"]).then(o=>{let r=o.blocked_users||[],n=document.getElementById("s-block-list");if(!n)return;n.innerHTML="";let f=document.getElementById("s-block-count");if(f&&(f.textContent=r.length?`(${r.length}\uBA85)`:""),!r.length){n.innerHTML='<span class="ext-empty-msg">\uCC28\uB2E8\uB41C \uC0AC\uC6A9\uC790\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</span>';return}r.forEach(i=>{let w=document.createElement("span");w.className="ext-badge-item",w.innerHTML=`<span>\u{1F464} ${i.member_num}${i.memo?` <em style="color:#64748b;font-style:normal;font-size:11px;">(${i.memo})</em>`:""}</span>`;let E=document.createElement("button");E.className="ext-badge-del",E.textContent="\xD7",E.addEventListener("click",()=>{confirm(`${i.member_num} \uCC28\uB2E8\uC744 \uD574\uC81C\uD560\uAE4C\uC694?`)&&t.get(["blocked_users"]).then(a=>{let k=(a.blocked_users||[]).filter(v=>v.member_num!==i.member_num);t.set({blocked_users:k}).then(Se.bind(null,t))})}),w.appendChild(E),n.appendChild(w)})})}function pe(t){t.get(["keywords"]).then(o=>{let r=o.keywords||[],n=document.getElementById("s-kw-list");if(!n)return;if(n.innerHTML="",!r.length){n.innerHTML='<span class="ext-empty-msg">\uCC28\uB2E8 \uD0A4\uC6CC\uB4DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</span>';return}let f={all:"\uC804\uCCB4",posts:"\uAC8C\uC2DC\uAE00",post:"\uAC8C\uC2DC\uAE00",comments:"\uB313\uAE00",comment:"\uB313\uAE00"},i={includes:"\uD3EC\uD568",starts:"\uC2DC\uC791"};r.forEach(w=>{let E=w.word||w.keyword,a=document.createElement("span");a.className="ext-badge-item",a.innerHTML=`<span>\u2328\uFE0F ${E}<br/><em style="font-size:10px;color:#2563eb;font-style:normal;">[${f[w.target]||"\uC804\uCCB4"}] [${i[w.method]||"\uD3EC\uD568"}]</em></span>`;let k=document.createElement("button");k.className="ext-badge-del",k.textContent="\xD7",k.addEventListener("click",v=>{v.stopPropagation(),t.get(["keywords"]).then(q=>{let N=(q.keywords||[]).filter(I=>(I.word||I.keyword)!==E);t.set({keywords:N}).then(pe.bind(null,t))})}),a.appendChild(k),n.appendChild(a)})})}function Te(t){t.get(["blockedDogcons","blockedDogconGroups"]).then(o=>{Le(o.blockedDogcons||[],"s-dogcon-list","blockedDogcons",r=>r.name,"\uCC28\uB2E8\uB41C \uAC1C\uB4DC\uB9BD\uCF58\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",t),Le(o.blockedDogconGroups||[],"s-dogcon-group-list","blockedDogconGroups",r=>r.name,"\uCC28\uB2E8\uB41C \uADF8\uB8F9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",t)})}function Le(t,o,r,n,f,i){let w=document.getElementById(o);if(w){if(w.innerHTML="",!t.length){w.innerHTML=`<span class="ext-empty-msg">${f}</span>`;return}t.forEach(E=>{let a=document.createElement("span");a.className="ext-badge-item",a.innerHTML=`<span>${n(E)}</span>`;let k=document.createElement("button");k.className="ext-badge-del",k.textContent="\xD7",k.addEventListener("click",()=>{i.get([r]).then(v=>{let q=(v[r]||[]).filter(N=>N.id!==E.id);i.set({[r]:q}).then(()=>Te(i))})}),a.appendChild(k),w.appendChild(a)})}}function _e(t){t.get(["userMemos"]).then(o=>{let r=o.userMemos||{},n=document.getElementById("s-memo-list");if(!n)return;n.innerHTML="";let f=Object.keys(r);if(!f.length){n.innerHTML='<span class="ext-empty-msg">\uB4F1\uB85D\uB41C \uBA54\uBAA8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</span>';return}f.forEach(i=>{let w=r[i],E=w,a="blue";if(w.includes(":")){let v=w.split(":");E=v[0],a=v[1]||"blue"}let k=document.createElement("span");k.className=`ext-badge-item ext-user-memo-badge ext-memo-${a}`,k.style.cssText="cursor:pointer;",k.title=`ID: ${i} / \uD074\uB9AD\uD558\uBA74 \uC0AD\uC81C`,k.innerHTML=`${E} <small>(${i})</small>`,k.addEventListener("click",()=>{confirm(`"${E}" \uBA54\uBAA8\uB97C \uC0AD\uC81C\uD560\uAE4C\uC694?`)&&t.get(["userMemos"]).then(v=>{let q=v.userMemos||{};delete q[i],t.set({userMemos:q}).then(()=>_e(t))})}),n.appendChild(k)})})}function Fe(t){let o=document.documentElement;o.classList.toggle("ext-hide-notice",!!t.hideNotice),o.classList.toggle("ext-hide-popular",!!t.hidePopular),o.classList.toggle("ext-hide-sidebar",!!t.hideSidebar),o.classList.toggle("ext-hide-compact",!!t.compactMode),o.classList.toggle("ext-hide-vote",!!t.disableVote)}function He(t){t.get(["hideNotice","hidePopular","hideSidebar","compactMode","disableVote","preventYoutubeAlgorithm","hideLevelIcon","blockMethod"]).then(o=>{[["s-hide-notice","hideNotice"],["s-hide-popular","hidePopular"],["s-hide-sidebar","hideSidebar"],["s-compact","compactMode"],["s-disable-vote","disableVote"],["s-no-yt","preventYoutubeAlgorithm"],["s-hide-level-icon","hideLevelIcon"]].forEach(([i,w])=>{let E=document.getElementById(i);E&&(E.checked=!!o[w])});let n=o.blockMethod||"remove",f=document.getElementById(`s-bm-${n}`);f&&(f.checked=!0)})}function Ue(t){t.get(["keywords","blocked_users","blockedDogcons","blockedDogconGroups","hideNotice","hidePopular","hideSidebar","compactMode","disableVote","preventYoutubeAlgorithm","contentWidth","blockMethod","userMemos","hideLevelIcon"]).then(o=>{let r=new Blob([JSON.stringify(o,null,2)],{type:"application/json"}),n=URL.createObjectURL(r),f=document.createElement("a");f.href=n,f.download=`dogdrip_plus_backup_${new Date().toISOString().slice(0,10)}.json`,document.body.appendChild(f),f.click(),document.body.removeChild(f),URL.revokeObjectURL(n)})}function We(t,o){let r=t.target.files?.[0];if(!r)return;let n=new FileReader;n.onload=f=>{try{let i=JSON.parse(f.target.result),w=(i.keywords||[]).map(a=>typeof a=="string"?{date:"",method:"includes",target:"all",word:a}:{date:a.date||"",method:a.method||"includes",target:a.target||"all",word:a.word||a.keyword}),E=(i.blocked_users||i.nicknames||[]).map(a=>{if(typeof a=="string"&&a.includes(":")){let k=a.split(":");return{date:"",member_num:k[0].trim(),memo:k[2]||""}}return{date:a.date||"",member_num:String(a.member_num||"").trim(),memo:a.memo||""}});o.set({keywords:w,blocked_users:E,blockedDogcons:i.blockedDogcons||[],blockedDogconGroups:i.blockedDogconGroups||[],hideNotice:!!i.hideNotice,hidePopular:!!i.hidePopular,hideSidebar:!!i.hideSidebar,compactMode:!!i.compactMode,disableVote:!!i.disableVote,preventYoutubeAlgorithm:!!i.preventYoutubeAlgorithm,contentWidth:i.contentWidth||"",blockMethod:i.blockMethod||"remove",userMemos:i.userMemos||{}}).then(()=>{alert("\u{1F389} \uBCF5\uAD6C \uC644\uB8CC! \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4."),location.reload()})}catch{alert("\u274C \uD30C\uC77C \uD615\uC2DD \uC624\uB958: \uC62C\uBC14\uB978 \uBC31\uC5C5 JSON \uD30C\uC77C\uC744 \uC120\uD0DD\uD558\uC138\uC694.")}t.target.value=""},n.readAsText(r)}function Ye(t,o){let r=t.target.files?.[0];if(!r)return;let n=new FileReader;n.onload=f=>{try{let i=JSON.parse(f.target.result),w=Array.isArray(i.blocked_members)?i.blocked_members:[],E=Array.isArray(i.keywords)?i.keywords:[],a=w.map(v=>({date:v.date||"",member_num:String(v.member_num||"").trim(),memo:v.memo||""})),k=E.map(v=>({date:v.date||"",method:v.method||"includes",target:v.target||"all",word:v.keyword||v.word||""}));o.get(["blockedDogcons","blockedDogconGroups","hideNotice","hidePopular","hideSidebar","compactMode","disableVote","preventYoutubeAlgorithm","contentWidth","blockMethod","userMemos"]).then(v=>{o.set({keywords:k,blocked_users:a,blockedDogcons:v.blockedDogcons||[],blockedDogconGroups:v.blockedDogconGroups||[],hideNotice:!!v.hideNotice,hidePopular:!!v.hidePopular,hideSidebar:!!v.hideSidebar,compactMode:!!v.compactMode,disableVote:!!v.disableVote,preventYoutubeAlgorithm:!!v.preventYoutubeAlgorithm,contentWidth:v.contentWidth||"",blockMethod:v.blockMethod||"remove",userMemos:v.userMemos||{}}).then(()=>{alert(`\u{1F389} Dogdrip++ \uB370\uC774\uD130 \uBCF5\uC6D0 \uC644\uB8CC!
-\uCC28\uB2E8 \uC720\uC800 ${a.length}\uBA85, \uD0A4\uC6CC\uB4DC ${k.length}\uAC1C\uB97C \uAC00\uC838\uC654\uC2B5\uB2C8\uB2E4.
-\uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4.`),location.reload()})})}catch{alert("\u274C \uD30C\uC77C \uD615\uC2DD \uC624\uB958: Dogdrip++ \uBC31\uC5C5 JSON \uD30C\uC77C\uC744 \uC120\uD0DD\uD558\uC138\uC694.")}t.target.value=""},n.readAsText(r)}function K(t,o){return`<div class="ext-blind-wrapper">
+\uC5C5\uB370\uC774\uD2B8 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9\uD560\uAE4C\uC694?`
+        )) {
+          window.open(
+            "https://github.com/z3ro2201/dogdrip-plus-mobilejs/raw/main/dogdrip-plus.user.js",
+            "_blank"
+          );
+          return;
+        }
+      }
+      openSettingsPanel(storage, settingsPanel);
+    });
+    settingsPanel.querySelector("#ext-settings-close")?.addEventListener("click", () => closeSettingsPanel(settingsPanel));
+    settingsPanel.addEventListener("click", (e) => {
+      if (e.target === settingsPanel) closeSettingsPanel(settingsPanel);
+    });
+    settingsPanel.querySelectorAll(".ext-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        settingsPanel.querySelectorAll(".ext-tab").forEach((t) => t.classList.remove("active"));
+        settingsPanel.querySelectorAll(".ext-tab-panel").forEach((p) => p.classList.remove("active"));
+        tab.classList.add("active");
+        const tabId = tab.dataset.tab;
+        settingsPanel.querySelector(`#${tabId}`)?.classList.add("active");
+        loadPanelData(tabId, storage);
+      });
+    });
+    settingsPanel.querySelector("#s-kw-add")?.addEventListener("click", () => {
+      const word = settingsPanel.querySelector("#s-kw-word").value.trim();
+      if (!word) {
+        alert("\uD0A4\uC6CC\uB4DC\uB97C \uC785\uB825\uD558\uC138\uC694.");
+        return;
+      }
+      const target = settingsPanel.querySelector("#s-kw-target").value;
+      const method = settingsPanel.querySelector("#s-kw-method").value;
+      storage.get(["keywords"]).then((r) => {
+        const list = r.keywords || [];
+        if (list.some((x) => (x.word || x.keyword) === word)) {
+          alert("\uC774\uBBF8 \uB4F1\uB85D\uB41C \uD0A4\uC6CC\uB4DC\uC785\uB2C8\uB2E4.");
+          return;
+        }
+        list.push({
+          date: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+          word,
+          method,
+          target
+        });
+        storage.set({ keywords: list }).then(() => {
+          settingsPanel.querySelector("#s-kw-word").value = "";
+          renderKeywordList(storage);
+        });
+      });
+    });
+    settingsPanel.querySelector("#s-backup")?.addEventListener("click", () => doBackup(storage));
+    settingsPanel.querySelector("#s-restore-btn")?.addEventListener(
+      "click",
+      () => settingsPanel.querySelector("#s-restore-file").click()
+    );
+    settingsPanel.querySelector("#s-restore-file")?.addEventListener("change", (e) => doRestore(e, storage));
+    settingsPanel.querySelector("#s-restore-pp-btn")?.addEventListener(
+      "click",
+      () => settingsPanel.querySelector("#s-restore-pp-file").click()
+    );
+    settingsPanel.querySelector("#s-restore-pp-file")?.addEventListener("change", (e) => doRestorePP(e, storage));
+  }
+  function bindDisplayToggles(storage, settingsPanel) {
+    if (_displayTogglesBound) return;
+    _displayTogglesBound = true;
+    const toggleMap = [
+      ["s-hide-notice", "hideNotice"],
+      ["s-hide-popular", "hidePopular"],
+      ["s-compact", "compactMode"],
+      ["s-disable-vote", "disableVote"],
+      ["s-no-yt", "preventYoutubeAlgorithm"],
+      ["s-hide-level-icon", "hideLevelIcon"]
+    ];
+    toggleMap.forEach(([elId, key]) => {
+      settingsPanel.querySelector(`#${elId}`)?.addEventListener("change", (e) => {
+        const val = e.target.checked;
+        storage.set({ [key]: val }).then(() => {
+          storage.get([
+            "hideNotice",
+            "hidePopular",
+            "hideSidebar",
+            "compactMode",
+            "disableVote"
+          ]).then(applyDisplayClasses);
+        });
+      });
+    });
+    ["s-bm-remove", "s-bm-blind", "s-bm-badge"].forEach((id) => {
+      settingsPanel.querySelector(`#${id}`)?.addEventListener("change", (e) => {
+        if (!e.target.checked) return;
+        storage.set({ blockMethod: e.target.value }).then(() => {
+          closeSettingsPanel(settingsPanel);
+          location.reload();
+        });
+      });
+    });
+  }
+  function loadPanelData(tabId, storage) {
+    switch (tabId) {
+      case "tab-block-user":
+        renderBlockList(storage);
+        break;
+      case "tab-keyword":
+        renderKeywordList(storage);
+        break;
+      case "tab-dogcon":
+        renderDogconLists(storage);
+        break;
+      case "tab-memo":
+        renderMemoList(storage);
+        break;
+      case "tab-display":
+        loadDisplaySettings(storage);
+        break;
+    }
+  }
+  function renderBlockList(storage) {
+    storage.get(["blocked_users"]).then((r) => {
+      const list = r.blocked_users || [];
+      const container = document.getElementById("s-block-list");
+      if (!container) return;
+      container.innerHTML = "";
+      const countEl = document.getElementById("s-block-count");
+      if (countEl) countEl.textContent = list.length ? `(${list.length}\uBA85)` : "";
+      if (!list.length) {
+        container.innerHTML = '<span class="ext-empty-msg">\uCC28\uB2E8\uB41C \uC0AC\uC6A9\uC790\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</span>';
+        return;
+      }
+      list.forEach((u) => {
+        const item = document.createElement("span");
+        item.className = "ext-badge-item";
+        item.innerHTML = `<span>\u{1F464} ${u.member_num}${u.memo ? ` <em style="color:#64748b;font-style:normal;font-size:11px;">(${u.memo})</em>` : ""}</span>`;
+        const del = document.createElement("button");
+        del.className = "ext-badge-del";
+        del.textContent = "\xD7";
+        del.addEventListener("click", () => {
+          if (!confirm(`${u.member_num} \uCC28\uB2E8\uC744 \uD574\uC81C\uD560\uAE4C\uC694?`)) return;
+          storage.get(["blocked_users"]).then((r2) => {
+            const l2 = (r2.blocked_users || []).filter(
+              (x) => x.member_num !== u.member_num
+            );
+            storage.set({ blocked_users: l2 }).then(renderBlockList.bind(null, storage));
+          });
+        });
+        item.appendChild(del);
+        container.appendChild(item);
+      });
+    });
+  }
+  function renderKeywordList(storage) {
+    storage.get(["keywords"]).then((r) => {
+      const list = r.keywords || [];
+      const container = document.getElementById("s-kw-list");
+      if (!container) return;
+      container.innerHTML = "";
+      if (!list.length) {
+        container.innerHTML = '<span class="ext-empty-msg">\uCC28\uB2E8 \uD0A4\uC6CC\uB4DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</span>';
+        return;
+      }
+      const targetLabel = {
+        all: "\uC804\uCCB4",
+        posts: "\uAC8C\uC2DC\uAE00",
+        post: "\uAC8C\uC2DC\uAE00",
+        comments: "\uB313\uAE00",
+        comment: "\uB313\uAE00"
+      };
+      const methodLabel = {
+        includes: "\uD3EC\uD568",
+        starts: "\uC2DC\uC791"
+      };
+      list.forEach((kw) => {
+        const word = kw.word || kw.keyword;
+        const item = document.createElement("span");
+        item.className = "ext-badge-item";
+        item.innerHTML = `<span>\u2328\uFE0F ${word}<br/><em style="font-size:10px;color:#2563eb;font-style:normal;">[${targetLabel[kw.target] || "\uC804\uCCB4"}] [${methodLabel[kw.method] || "\uD3EC\uD568"}]</em></span>`;
+        const del = document.createElement("button");
+        del.className = "ext-badge-del";
+        del.textContent = "\xD7";
+        del.addEventListener("click", (e) => {
+          e.stopPropagation();
+          storage.get(["keywords"]).then((r2) => {
+            const l2 = (r2.keywords || []).filter(
+              (x) => (x.word || x.keyword) !== word
+            );
+            storage.set({ keywords: l2 }).then(renderKeywordList.bind(null, storage));
+          });
+        });
+        item.appendChild(del);
+        container.appendChild(item);
+      });
+    });
+  }
+  function renderDogconLists(storage) {
+    storage.get(["blockedDogcons", "blockedDogconGroups"]).then((r) => {
+      renderSimpleList(
+        r.blockedDogcons || [],
+        "s-dogcon-list",
+        "blockedDogcons",
+        (i) => i.name,
+        "\uCC28\uB2E8\uB41C \uAC1C\uB4DC\uB9BD\uCF58\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        storage
+      );
+      renderSimpleList(
+        r.blockedDogconGroups || [],
+        "s-dogcon-group-list",
+        "blockedDogconGroups",
+        (i) => i.name,
+        "\uCC28\uB2E8\uB41C \uADF8\uB8F9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        storage
+      );
+    });
+  }
+  function renderSimpleList(list, containerId, key, labelFn, emptyMsg, storage) {
+    const c = document.getElementById(containerId);
+    if (!c) return;
+    c.innerHTML = "";
+    if (!list.length) {
+      c.innerHTML = `<span class="ext-empty-msg">${emptyMsg}</span>`;
+      return;
+    }
+    list.forEach((item) => {
+      const el = document.createElement("span");
+      el.className = "ext-badge-item";
+      el.innerHTML = `<span>${labelFn(item)}</span>`;
+      const del = document.createElement("button");
+      del.className = "ext-badge-del";
+      del.textContent = "\xD7";
+      del.addEventListener("click", () => {
+        storage.get([key]).then((r) => {
+          const l = (r[key] || []).filter((x) => x.id !== item.id);
+          storage.set({ [key]: l }).then(() => renderDogconLists(storage));
+        });
+      });
+      el.appendChild(del);
+      c.appendChild(el);
+    });
+  }
+  function renderMemoList(storage) {
+    storage.get(["userMemos"]).then((r) => {
+      const memos = r.userMemos || {};
+      const c = document.getElementById("s-memo-list");
+      if (!c) return;
+      c.innerHTML = "";
+      const ids = Object.keys(memos);
+      if (!ids.length) {
+        c.innerHTML = '<span class="ext-empty-msg">\uB4F1\uB85D\uB41C \uBA54\uBAA8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</span>';
+        return;
+      }
+      ids.forEach((mid) => {
+        const raw = memos[mid];
+        let text = raw, color = "blue";
+        if (raw.includes(":")) {
+          const p = raw.split(":");
+          text = p[0];
+          color = p[1] || "blue";
+        }
+        const badge = document.createElement("span");
+        badge.className = `ext-badge-item ext-user-memo-badge ext-memo-${color}`;
+        badge.style.cssText = "cursor:pointer;";
+        badge.title = `ID: ${mid} / \uD074\uB9AD\uD558\uBA74 \uC0AD\uC81C`;
+        badge.innerHTML = `${text} <small>(${mid})</small>`;
+        badge.addEventListener("click", () => {
+          if (!confirm(`"${text}" \uBA54\uBAA8\uB97C \uC0AD\uC81C\uD560\uAE4C\uC694?`)) return;
+          storage.get(["userMemos"]).then((r2) => {
+            const m2 = r2.userMemos || {};
+            delete m2[mid];
+            storage.set({ userMemos: m2 }).then(() => renderMemoList(storage));
+          });
+        });
+        c.appendChild(badge);
+      });
+    });
+  }
+  function applyDisplayClasses(r) {
+    const html = document.documentElement;
+    html.classList.toggle("ext-hide-notice", !!r.hideNotice);
+    html.classList.toggle("ext-hide-popular", !!r.hidePopular);
+    html.classList.toggle("ext-hide-sidebar", !!r.hideSidebar);
+    html.classList.toggle("ext-hide-compact", !!r.compactMode);
+    html.classList.toggle("ext-hide-vote", !!r.disableVote);
+  }
+  function loadDisplaySettings(storage) {
+    storage.get([
+      "hideNotice",
+      "hidePopular",
+      "hideSidebar",
+      "compactMode",
+      "disableVote",
+      "preventYoutubeAlgorithm",
+      "hideLevelIcon",
+      "blockMethod"
+    ]).then((r) => {
+      const map = [
+        ["s-hide-notice", "hideNotice"],
+        ["s-hide-popular", "hidePopular"],
+        ["s-hide-sidebar", "hideSidebar"],
+        ["s-compact", "compactMode"],
+        ["s-disable-vote", "disableVote"],
+        ["s-no-yt", "preventYoutubeAlgorithm"],
+        ["s-hide-level-icon", "hideLevelIcon"]
+      ];
+      map.forEach(([elId, key]) => {
+        const el = document.getElementById(elId);
+        if (el) el.checked = !!r[key];
+      });
+      const method = r.blockMethod || "remove";
+      const rm = document.getElementById(`s-bm-${method}`);
+      if (rm) rm.checked = true;
+    });
+  }
+  function doBackup(storage) {
+    storage.get([
+      "keywords",
+      "blocked_users",
+      "blockedDogcons",
+      "blockedDogconGroups",
+      "hideNotice",
+      "hidePopular",
+      "hideSidebar",
+      "compactMode",
+      "disableVote",
+      "preventYoutubeAlgorithm",
+      "contentWidth",
+      "blockMethod",
+      "userMemos",
+      "hideLevelIcon"
+    ]).then((data) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json"
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dogdrip_plus_backup_${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+  function doRestore(event, storage) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        const keywords = (data.keywords || []).map((k) => {
+          if (typeof k === "string")
+            return { date: "", method: "includes", target: "all", word: k };
+          return {
+            date: k.date || "",
+            method: k.method || "includes",
+            target: k.target || "all",
+            word: k.word || k.keyword
+          };
+        });
+        const blocked_users = (data.blocked_users || data.nicknames || []).map(
+          (u) => {
+            if (typeof u === "string" && u.includes(":")) {
+              const p = u.split(":");
+              return { date: "", member_num: p[0].trim(), memo: p[2] || "" };
+            }
+            return {
+              date: u.date || "",
+              member_num: String(u.member_num || "").trim(),
+              memo: u.memo || ""
+            };
+          }
+        );
+        storage.set({
+          keywords,
+          blocked_users,
+          blockedDogcons: data.blockedDogcons || [],
+          blockedDogconGroups: data.blockedDogconGroups || [],
+          hideNotice: !!data.hideNotice,
+          hidePopular: !!data.hidePopular,
+          hideSidebar: !!data.hideSidebar,
+          compactMode: !!data.compactMode,
+          disableVote: !!data.disableVote,
+          preventYoutubeAlgorithm: !!data.preventYoutubeAlgorithm,
+          contentWidth: data.contentWidth || "",
+          blockMethod: data.blockMethod || "remove",
+          userMemos: data.userMemos || {}
+        }).then(() => {
+          alert("\u{1F389} \uBCF5\uAD6C \uC644\uB8CC! \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4.");
+          location.reload();
+        });
+      } catch {
+        alert("\u274C \uD30C\uC77C \uD615\uC2DD \uC624\uB958: \uC62C\uBC14\uB978 \uBC31\uC5C5 JSON \uD30C\uC77C\uC744 \uC120\uD0DD\uD558\uC138\uC694.");
+      }
+      event.target.value = "";
+    };
+    reader.readAsText(file);
+  }
+  function doRestorePP(event, storage) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        const rawMembers = Array.isArray(data.blocked_members) ? data.blocked_members : [];
+        const rawKeywords = Array.isArray(data.keywords) ? data.keywords : [];
+        const blocked_users = rawMembers.map((u) => ({
+          date: u.date || "",
+          member_num: String(u.member_num || "").trim(),
+          memo: u.memo || ""
+        }));
+        const keywords = rawKeywords.map((k) => ({
+          date: k.date || "",
+          method: k.method || "includes",
+          target: k.target || "all",
+          word: k.keyword || k.word || ""
+        }));
+        storage.get([
+          "blockedDogcons",
+          "blockedDogconGroups",
+          "hideNotice",
+          "hidePopular",
+          "hideSidebar",
+          "compactMode",
+          "disableVote",
+          "preventYoutubeAlgorithm",
+          "contentWidth",
+          "blockMethod",
+          "userMemos"
+        ]).then((cur) => {
+          storage.set({
+            keywords,
+            blocked_users,
+            blockedDogcons: cur.blockedDogcons || [],
+            blockedDogconGroups: cur.blockedDogconGroups || [],
+            hideNotice: !!cur.hideNotice,
+            hidePopular: !!cur.hidePopular,
+            hideSidebar: !!cur.hideSidebar,
+            compactMode: !!cur.compactMode,
+            disableVote: !!cur.disableVote,
+            preventYoutubeAlgorithm: !!cur.preventYoutubeAlgorithm,
+            contentWidth: cur.contentWidth || "",
+            blockMethod: cur.blockMethod || "remove",
+            userMemos: cur.userMemos || {}
+          }).then(() => {
+            alert(
+              `\u{1F389} Dogdrip++ \uB370\uC774\uD130 \uBCF5\uC6D0 \uC644\uB8CC!
+\uCC28\uB2E8 \uC720\uC800 ${blocked_users.length}\uBA85, \uD0A4\uC6CC\uB4DC ${keywords.length}\uAC1C\uB97C \uAC00\uC838\uC654\uC2B5\uB2C8\uB2E4.
+\uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4.`
+            );
+            location.reload();
+          });
+        });
+      } catch {
+        alert("\u274C \uD30C\uC77C \uD615\uC2DD \uC624\uB958: Dogdrip++ \uBC31\uC5C5 JSON \uD30C\uC77C\uC744 \uC120\uD0DD\uD558\uC138\uC694.");
+      }
+      event.target.value = "";
+    };
+    reader.readAsText(file);
+  }
+
+  // src/common/blind.ts
+  function buildBlindWrapperHTML(typeLabel, originalHTML) {
+    return `<div class="ext-blind-wrapper">
     <div class="ext-blind-label">
-      <span>\u{1F6AB} \uCC28\uB2E8\uB41C ${t}\uC785\uB2C8\uB2E4.</span>
+      <span>\u{1F6AB} \uCC28\uB2E8\uB41C ${typeLabel}\uC785\uB2C8\uB2E4.</span>
       <button class="ext-blind-toggle-btn">\uB0B4\uC6A9 \uBCF4\uAE30</button>
     </div>
-    <div class="ext-blind-content" style="display:none;">${o}</div>
-  </div>`}function F(t){t.querySelectorAll(".ext-blind-wrapper:not([data-bound])").forEach(o=>{o.dataset.bound="true";let r=o.querySelector(".ext-blind-toggle-btn"),n=o.querySelector(".ext-blind-content");!r||!n||(r.addEventListener("click",f=>{f.preventDefault(),f.stopPropagation();let i=n.style.display!=="none";n.style.display=i?"none":"block",r.textContent=i?"\uB0B4\uC6A9 \uBCF4\uAE30":"\uB0B4\uC6A9 \uC228\uAE30\uAE30"}),o.addEventListener("mouseenter",()=>{n.style.display==="none"&&(n.style.display="block",r.textContent="\uB0B4\uC6A9 \uC228\uAE30\uAE30")}),o.addEventListener("mouseleave",()=>{o.dataset.pinned!=="true"&&(n.style.display="none",r.textContent="\uB0B4\uC6A9 \uBCF4\uAE30")}),r.addEventListener("click",f=>{f.stopPropagation(),o.dataset.pinned=o.dataset.pinned==="true"?"false":"true"}))})}function A(t,o,r){if(!o)return null;let n=document.createElement("span");return n.className=`ext-user-memo-badge ext-memo-${r||"blue"} ext-badge-id-${t}`,n.innerText=o,n.title=`\uBA54\uBAA8: ${o}
-(\uD68C\uC6D0\uBC88\uD638: ${t})`,n}function Q(t,o,r){if(!t||!o)return!1;let n=typeof o=="string"?o:o.word||o.keyword,f=typeof o=="string"?"includes":o.method||"includes",i=typeof o=="string"?"all":o.target||"all",w=i==="post"?"posts":i==="comment"?"comments":i;if(w!=="all"&&w!==r)return!1;let E=t.replace(/[\s\n\r\t]+/g," ");E=E.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g,"").trim();let a=n.trim();return f==="includes"?E.includes(a):f==="starts"?E.startsWith(a):!1}function ne(){let t=document.getElementById("ext-loading-overlay");t&&(t.style.opacity="0",setTimeout(()=>{t.remove()},200))}var re="f43f5e",le="16a34a";function qe(t){let{storage:o,openBlockModal:r,openDogconMenu:n,injectDownloadAllButton:f,injectCopyLinkButton:i}=t,w=new Promise(a=>setTimeout(a,1e3)),E=o.get(["keywords","blocked_users","blockedDogcons","blockedDogconGroups","hideNotice","hidePopular","hideSidebar","compactMode","disableVote","preventYoutubeAlgorithm","contentWidth","blockMethod","userMemos","readabilityMode","legacyToolbar","hiddenMenus","hiddenSubMenus","hideLevelIcon"]).then(a=>{let k=a.keywords||[],v=a.blocked_users||[],q=a.blockedDogcons||[],N=a.blockedDogconGroups||[],I=a.blockMethod==="blind",D=a.blockMethod==="badge",W=Array.isArray(a.userMemos)?a.userMemos:[],R=new Map(W.map(e=>[String(e.member_num),e])),z=v.map(e=>String(e.member_num).trim()).filter(e=>e!==""),C=new Map(v.map(e=>[String(e.member_num).trim(),e])),ie=q.map(e=>e.id),ae=N.map(e=>e.id),_=document.documentElement;_&&(a.contentWidth&&a.contentWidth.trim()!==""&&_.style.setProperty("--ext-custom-width",a.contentWidth.trim()),a.hideNotice===!0&&_.classList.add("ext-hide-notice"),a.hidePopular===!0&&_.classList.add("ext-hide-popular"),a.hideSidebar===!0&&_.classList.add("ext-hide-sidebar"),a.compactMode===!0&&_.classList.add("ext-hide-compact"),a.disableVote===!0&&_.classList.add("ext-hide-vote"),a.readabilityMode===!0?_.classList.add("ext-readability-mode"):_.classList.remove("ext-readability-mode"),a.legacyToolbar===!0?_.classList.add("ext-legacy-toolbar"):_.classList.remove("ext-legacy-toolbar"),a.hideLevelIcon===!0?_.classList.add("ext-hide-level-icon"):_.classList.remove("ext-hide-level-icon"));function U(e){let c=R.get(String(e));return c?{text:c.memo||"",color:c.color||"blue"}:{text:"",color:"blue"}}document.querySelectorAll("li.webzine").forEach(e=>{let c=e.querySelector(".title-link"),p=e.querySelector('a[class*="member_"]'),g=!1,b=!1;if(c&&k.length>0){let u=c.textContent.trim();k.some(h=>Q(u,h,"posts"))&&(g=!0)}let l="";if(p){let u=p.className.match(/member_(\d+)/);u&&(l=u[1],z.includes(l)&&(b=!0))}if(g){e.remove();return}if(b){if(D){if(l&&p&&!e.querySelector(`.ext-badge-id-${l}`)){let u=C.get(l),h=u&&u.memo&&u.memo.trim()!==""?u.memo.trim():"\uCC28\uB2E8\uB428",y=A(l,h,"red-solid");y&&p.after(y)}e.classList.add("ext-blocked-user-layout");return}if(e.dataset.extFiltered)return;if(e.dataset.extFiltered="true",I){if(p&&!e.querySelector(`.ext-badge-id-${l}`)){let h=C.get(l),y=h&&h.memo&&h.memo.trim()!==""?h.memo.trim():"\uCC28\uB2E8\uB428",M=A(l,y,"red-solid");M&&p.after(M)}let u=e.innerHTML;e.innerHTML=K("\uAC8C\uC2DC\uAE00",u),F(e)}else e.remove()}else if(l&&R.has(l)&&p&&!e.querySelector(`.ext-badge-id-${l}`)){let u=U(l),h=A(l,u.text,u.color);h&&p.after(h)}}),document.querySelectorAll("li span.title a, li div.eq span.text-link").forEach(e=>{let c=e.closest("li");if(!c)return;let p=c.querySelector('a[class*="member_"]'),g="";if(p){let b=p.className.match(/member_(\d+)/);b&&(g=b[1])}if(k.length>0){let b=e.textContent.trim();if(k.some(l=>Q(b,l,"posts"))){c.remove();return}}if(g&&z.includes(g)){if(D){if(p&&!c.querySelector(`.ext-badge-id-${g}`)){let b=C.get(g),l=b&&b.memo&&b.memo.trim()!==""?b.memo.trim():"\uCC28\uB2E8\uB428",u=A(g,l,"red-solid");u&&p.after(u)}c.style.backgroundColor="#fff1f2",c.classList.add("ext-blocked-user-layout");return}if(c.dataset.extFiltered)return;if(c.dataset.extFiltered="true",I){if(p&&!c.querySelector(`.ext-badge-id-${g}`)){let l=C.get(g),u=l&&l.memo&&l.memo.trim()!==""?l.memo.trim():"\uCC28\uB2E8\uB428",h=A(g,u,"red-solid");h&&p.after(h)}let b=c.innerHTML;c.innerHTML=K("\uAC8C\uC2DC\uAE00",b),F(c)}else c.remove()}else if(g&&R.has(g)&&p&&!c.querySelector(`.ext-badge-id-${g}`)){let b=U(g),l=A(g,b.text,b.color);l&&p.after(l)}}),document.querySelectorAll("tr.ed").forEach(e=>{let c=e.querySelector(".title"),p=e.querySelector(".author a[class*='member_']"),g=!1,b=!1;if(c&&k.length>0){let u=c.querySelector(".title-link"),h="";if(u)h=u.textContent.trim();else{let M=c.querySelector('a[href*="dogdrip.net/"], a[href^="/"]');if(M){let O=M.cloneNode(!0),te=O.querySelector(".text-primary");te&&te.remove(),h=O.textContent.replace(/\[.*?\]/g,"").trim()}else h=c.textContent.trim()}let y=h.replace(/[\s\n\r\t]+/g," ").trim();k.some(M=>Q(y,M,"posts"))&&(g=!0)}let l="";if(p){let u=p.className.match(/member_(\d+)/);u&&(l=u[1],z.includes(l)&&(b=!0))}if(g){e.remove();return}if(b){if(D){if(l&&p&&!e.querySelector(`.ext-badge-id-${l}`)){let u=C.get(l),h=u&&u.memo&&u.memo.trim()!==""?u.memo.trim():"\uCC28\uB2E8\uB428",y=A(l,h,"red-solid");y&&p.after(y)}e.style.backgroundColor="#fff1f2",e.classList.add("ext-blocked-user-layout");return}if(e.dataset.extFiltered)return;if(e.dataset.extFiltered="true",I){if(p&&!e.querySelector(`.ext-badge-id-${l}`)){let y=C.get(l),M=y&&y.memo&&y.memo.trim()!==""?y.memo.trim():"\uCC28\uB2E8\uB428",O=A(l,M,"red-solid");O&&p.after(O)}let u=e.querySelectorAll("td, th").length||6,h=e.innerHTML;e.innerHTML=`<td colspan="${u}" style="padding: 0;">${K("\uAC8C\uC2DC\uAE00",`<table style="width:100%"><tbody><tr>${h}</tr></tbody></table>`)}</td>`,F(e)}else e.remove()}else if(l&&R.has(l)&&p&&!e.querySelector(`.ext-badge-id-${l}`)){let u=U(l),h=A(l,u.text,u.color);h&&p.after(h)}}),document.querySelectorAll(".ed.comment-content").forEach(e=>{let c=e.querySelector('a[class*="member_"]'),p=!1,g=e.querySelector(".xe_content, .comment-text");if(g&&k.length>0){let u=(g.innerText||g.textContent||"").replace(/[\s\n\r\t]+/g," ").trim();k.some(h=>Q(u,h,"comments"))&&(p=!0)}if(p){let l=e.closest("li, div.comment-item")||e;if(l.dataset.extFiltered)return;if(l.dataset.extFiltered="true",I){let u=l.innerHTML;l.innerHTML=K("\uD0A4\uC6CC\uB4DC\uAC00 \uD3EC\uD568\uB41C \uB313\uAE00",u),F(l)}else l.remove();return}let b="";if(c){let l=c.className.match(/member_(\d+)/);l&&(b=l[1])}if(b&&z.length>0&&z.includes(b)){let l=e.closest("li, div.comment-item")||e;if(D){if(c&&!e.querySelector(`.ext-badge-id-${b}`)){let u=C.get(b),h=u&&u.memo&&u.memo.trim()!==""?u.memo.trim():"\uCC28\uB2E8\uB428",y=A(b,h,"red-solid");y&&c.after(y)}l.style.backgroundColor="#fff1f2",l.classList.add("ext-blocked-user-layout");return}if(l.dataset.extFiltered)return;if(l.dataset.extFiltered="true",I){if(c&&!l.querySelector(`.ext-badge-id-${b}`)){let h=C.get(b),y=h&&h.memo&&h.memo.trim()!==""?h.memo.trim():"\uCC28\uB2E8\uB428",M=A(b,y,"red-solid");M&&c.after(M)}let u=l.innerHTML;l.innerHTML=K("\uB313\uAE00",u),F(l)}else l.remove();return}if(c&&b&&R.has(b)&&!e.querySelector(`.ext-badge-id-${b}`)){let l=U(b),u=A(b,l.text,l.color);u&&c.after(u)}if(c&&b){let l=c.textContent.trim(),u=e.querySelector("ul.dropdown-menu");if(u){let h=Array.from(u.querySelectorAll("li")).filter(y=>y.innerHTML.trim()==="");if(h.length>0){let y=h[0];y.querySelector(".ext-block-menu-item")||(y.innerHTML='<a class="ext-block-menu-item"><span class="ed icon"><i class="fas fa-user-slash"></i></span>\uCC28\uB2E8</a>',y.querySelector("a").addEventListener("click",M=>{M.preventDefault(),r(l,b)}))}}}});let J=document.querySelector(".title-toolbar");if(J){let e=J.querySelector('a[class*="member_"]'),c=J.querySelector("ul.dropdown-menu");if(e&&c){let p=e.className.match(/member_(\d+)/)?.[1];if(p){if(z.includes(p)){if(!e.querySelector(`.ext-badge-id-${p}`)&&!e.nextElementSibling?.classList.contains("ext-user-memo-badge")){let l=C.get(p),u=l&&l.memo&&l.memo.trim()!==""?l.memo.trim():"\uCC28\uB2E8\uB428",h=A(p,u,"red-solid");h&&e.after(h)}}else if(R.has(p)&&!e.nextElementSibling?.classList.contains("ext-user-memo-badge")){let l=U(p),u=A(p,l.text,l.color);u&&e.after(u)}let g=c.querySelector(".ext-toolbar-member-block");g&&g.remove();let b=document.createElement("li");b.className="ext-toolbar-member-block",z.includes(p)?(b.innerHTML=`<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${le}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-check"></i></span> \uCC28\uB2E8 \uD574\uC81C</a>`,b.querySelector("a").addEventListener("click",l=>{l.preventDefault(),o.get(["blocked_users"]).then(u=>{let h=u.blocked_users||[];h=h.filter(y=>String(y.member_num)!==String(p)),o.set({blocked_users:h}).then(()=>{window.location.reload()})})})):(b.innerHTML=`<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${re}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-slash"></i></span> \uCC28\uB2E8</a>`,b.querySelector("a").addEventListener("click",l=>{l.preventDefault(),r(e.textContent.trim(),p)})),c.insertBefore(b,c.firstChild)}}}document.querySelectorAll(".ed.dropdown .ed.dropdown-menu").forEach(e=>{f(e)}),document.querySelectorAll("img.dogcon-clickable, img[data-dogcon-srl]").forEach(e=>{let c=e.getAttribute("data-dogcon-srl"),p=e.getAttribute("data-dogcon-file-srl"),g=e.getAttribute("data-title")||e.getAttribute("title")||"\uAC1C\uB4DC\uB9BD\uCF58",b=e.getAttribute("alt")||"\uCF58";if(e.dataset.extProcessed)return;e.dataset.extProcessed="true";let l=ae.includes(c),u=ie.includes(p),h=`https://www.dogdrip.net/?mid=dogcon&dogcon_srl=${c}`;if(l||u){let y=document.createElement("div");y.className="ext-dogcon-blocked",y.innerHTML=`\u{1F6AB} <span>${g} (${b}) \uCC28\uB2E8\uB428</span><a href="${h}" target="_blank" class="dogcon-info-link" style="margin-left:6px; color:#0284c7; text-decoration:underline; font-weight:bold;">[\u2139\uFE0F \uC815\uBCF4]</a>`,y.querySelector(".dogcon-info-link").addEventListener("click",M=>{M.stopPropagation()}),y.dataset.srl=c,y.dataset.fileSrl=p,y.dataset.title=g,y.dataset.alt=b,y.dataset.isSingleBlocked=String(u),y.dataset.isGroupBlocked=String(l),y.addEventListener("click",M=>{M.stopPropagation(),M.preventDefault(),n(M,y,!0)}),e.parentNode.insertBefore(y,e),e.remove()}else e.addEventListener("click",y=>{y.stopPropagation(),y.preventDefault();let M=document.createElement("div");M.dataset.srl=c,M.dataset.fileSrl=p,M.dataset.title=g,M.dataset.alt=b,M.dataset.isSingleBlocked="false",M.dataset.isGroupBlocked="false",n(y,M,!1)})}),a.disableVote===!0&&(document.querySelectorAll("td.ed.voteNum.text-primary").forEach(e=>{e.dataset.extVoteProcessed||(e.dataset.extVoteProcessed="true",e.innerHTML='<i class="fas fa-baby"></i>')}),document.querySelectorAll("i.far.fa-thumbs-up").forEach(e=>{if(!e.dataset.extVoteProcessed){e.dataset.extVoteProcessed="true",e.className="fas fa-baby";let c=e.closest("span.text-primary");c?.nextElementSibling?.classList.contains("text-primary")&&c.nextElementSibling.remove()}}),document.querySelectorAll("a.votebtn").forEach(e=>{if(!e.dataset.extVoteProcessed){if(e.dataset.extVoteProcessed="true",e.getAttribute("title")==="\uCD94\uCC9C"){let c=e.querySelector("i");c&&(c.className="fas fa-baby");let p=e.querySelector("span.count");p&&p.remove();let g=e.parentElement;g?.tagName.toLowerCase()==="span"&&(g.parentNode.insertBefore(e,g),g.remove())}e.getAttribute("title")==="\uBE44\uCD94\uCC9C"&&e.remove()}}),document.querySelectorAll("a.comment-item-tool").forEach(e=>{e.classList.remove("border-left-dotted")})),a.preventYoutubeAlgorithm===!0&&document.querySelectorAll('iframe[src*="youtube.com/embed/"]').forEach(e=>{if(!e.dataset.extYoutubeProcessed){e.dataset.extYoutubeProcessed="true";let c=e.getAttribute("src");c&&e.setAttribute("src",c.replace("youtube.com/embed/","youtube-nocookie.com/embed/"))}}),(!a.contentWidth||a.contentWidth.trim()==="")&&document.querySelectorAll(".container").forEach(e=>{e.style.maxWidth="960px"});let Y=a.hiddenMenus||[],G=a.hiddenSubMenus||[];(Y.length>0||G.length>0)&&document.querySelectorAll(".eq.navbar-nav, .eq.nav-menu").forEach(c=>{c.querySelectorAll(":scope > li").forEach(p=>{let g=p.querySelector("a[href]");if(g)try{let l=new URL(g.href,location.origin).pathname.split("/").filter(Boolean)[0]||"";if(Y.includes(l)){p.style.display="none";return}G.length>0&&p.querySelectorAll("ul a[href], .child a[href]").forEach(h=>{let y=new URL(h.href,location.origin),M=ee(y);if(G.includes(M)){let O=h.closest("li");O&&(O.style.display="none")}})}catch{}})}),(Y.length>0||G.length>0)&&document.querySelectorAll(".xe-widget-wrapper").forEach(e=>{let c=e.querySelector(".widget-title-text, .eq.widget-title h4, .eq.widget-title .col-6:first-child");if(!c)return;let p=c.querySelector("a[href]");if(p)try{let g=p.getAttribute("href")||"",b=new URL(g,location.origin),l=b.pathname.split("/").filter(Boolean)[0]||"";if(l&&Y.includes(l)){e.style.display="none";return}if(G.length>0){let u=ee(b);u&&G.includes(u)&&(e.style.display="none")}}catch{}});function ee(e){let p=e.pathname.split("/").filter(Boolean)[0]||"",g=e.searchParams.get("sort_index"),b=e.searchParams.get("category"),l=e.searchParams.get("mid")||p;return g?`${l}__${g}`:b?`${l}__cat_${b}`:p}document.querySelectorAll("li.webzine").forEach(e=>{if(e.dataset.extHotdealProcessed)return;let c=e.querySelector("a.title-link");if(!(!c||!(c.getAttribute("style")||"").includes("line-through"))&&(e.dataset.extHotdealProcessed="true",e.style.position="relative",!e.querySelector(".ext-hotdeal-ended-overlay"))){let g=document.createElement("div");g.className="ext-hotdeal-ended-overlay",e.appendChild(g)}}),document.querySelectorAll("tr.ed").forEach(e=>{if(e.dataset.extHotdealProcessed)return;let c=e.querySelector(".title a[data-document-srl], .title .title-link");if(!c||!(c.getAttribute("style")||"").includes("line-through"))return;e.dataset.extHotdealProcessed="true",e.classList.add("ext-hotdeal-ended-row");let g=e.querySelector("td.title a[data-document-srl]");if(g&&!e.querySelector(".ext-hotdeal-badge")){let b=document.createElement("span");b.className="ext-hotdeal-badge",b.textContent="\uC885\uB8CC",g.parentNode.insertBefore(b,g)}}),i()});Promise.all([w,E]).then(()=>{ne()})}function Ie(t){if(!t)return 0;let o=t.replace(/[vV\s]/g,"").split(".").map(Number),r=o[0]||0,n=o[1]||0,f=o[2]||0;return r*1e6+n*1e3+f}function Ce(t,o){return Ie(t)-Ie(o)}var Be=[{key:"blue",hex:"#3b82f6",name:"\uBE14\uB8E8"},{key:"green",hex:"#10b981",name:"\uADF8\uB9B0"},{key:"red",hex:"#ef4444",name:"\uB808\uB4DC"},{key:"yellow",hex:"#f59e0b",name:"\uC610\uB85C\uC6B0"},{key:"purple",hex:"#8b5cf6",name:"\uD37C\uD50C"},{key:"pink",hex:"#ec4899",name:"\uD551\uD06C"},{key:"cyan",hex:"#06b6d4",name:"\uC2DC\uC548"},{key:"orange",hex:"#f97316",name:"\uC624\uB80C\uC9C0"},{key:"teal",hex:"#14b8a6",name:"\uD2F0\uC77C"},{key:"gray",hex:"#64748b",name:"\uADF8\uB808\uC774"}];(function(){"use strict";let t="1.1.15",o="https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt",r=new oe;ve();let n="",f="",i="",w="blue",E={memberId:"",nickname:""},a=null,k=document.createElement("div");k.id="ext-block-modal",k.className="ext-modal-overlay",k.innerHTML=`
+    <div class="ext-blind-content" style="display:none;">${originalHTML}</div>
+  </div>`;
+  }
+  function attachBlindToggleEvents(container) {
+    container.querySelectorAll(".ext-blind-wrapper:not([data-bound])").forEach((wrapper) => {
+      wrapper.dataset.bound = "true";
+      const btn = wrapper.querySelector(".ext-blind-toggle-btn");
+      const content = wrapper.querySelector(".ext-blind-content");
+      if (!btn || !content) return;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isVisible = content.style.display !== "none";
+        content.style.display = isVisible ? "none" : "block";
+        btn.textContent = isVisible ? "\uB0B4\uC6A9 \uBCF4\uAE30" : "\uB0B4\uC6A9 \uC228\uAE30\uAE30";
+      });
+      wrapper.addEventListener("mouseenter", () => {
+        if (content.style.display !== "none") return;
+        content.style.display = "block";
+        btn.textContent = "\uB0B4\uC6A9 \uC228\uAE30\uAE30";
+      });
+      wrapper.addEventListener("mouseleave", () => {
+        if (wrapper.dataset.pinned === "true") return;
+        content.style.display = "none";
+        btn.textContent = "\uB0B4\uC6A9 \uBCF4\uAE30";
+      });
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        wrapper.dataset.pinned = wrapper.dataset.pinned === "true" ? "false" : "true";
+      });
+    });
+  }
+
+  // src/common/memo.ts
+  function createMemoBadgeElement(memberId, memoText, colorStyle) {
+    if (!memoText) return null;
+    const badge = document.createElement("span");
+    badge.className = `ext-user-memo-badge ext-memo-${colorStyle || "blue"} ext-badge-id-${memberId}`;
+    badge.innerText = memoText;
+    badge.title = `\uBA54\uBAA8: ${memoText}
+(\uD68C\uC6D0\uBC88\uD638: ${memberId})`;
+    return badge;
+  }
+
+  // src/common/keywordMatcher.ts
+  function checkKeywordMatchCondition(titleText, keywordObj, targetArea) {
+    if (!titleText || !keywordObj) return false;
+    const word = typeof keywordObj === "string" ? keywordObj : keywordObj.word || keywordObj.keyword;
+    const method = typeof keywordObj === "string" ? "includes" : keywordObj.method || "includes";
+    const target = typeof keywordObj === "string" ? "all" : keywordObj.target || "all";
+    const normalizedTarget = target === "post" ? "posts" : target === "comment" ? "comments" : target;
+    if (normalizedTarget !== "all" && normalizedTarget !== targetArea) return false;
+    let cleanText = titleText.replace(/[\s\n\r\t]+/g, " ");
+    cleanText = cleanText.replace(/[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E]/g, "").trim();
+    const cleanWord = word.trim();
+    if (method === "includes") {
+      return cleanText.includes(cleanWord);
+    }
+    if (method === "starts") {
+      return cleanText.startsWith(cleanWord);
+    }
+    return false;
+  }
+
+  // src/common/overlay.ts
+  function removeLoadingOverlay() {
+    const overlay = document.getElementById("ext-loading-overlay");
+    if (overlay) {
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.remove();
+      }, 200);
+    }
+  }
+
+  // src/common/constants.ts
+  var BLOCK_COLOR = "f43f5e";
+  var GRANT_COLOR = "16a34a";
+
+  // src/common/filter.ts
+  function executeFilterWithMinTime(deps) {
+    const {
+      storage,
+      openBlockModal,
+      openDogconMenu,
+      injectDownloadAllButton,
+      injectCopyLinkButton
+    } = deps;
+    const minTimePromise = new Promise(
+      (resolve) => setTimeout(resolve, 1e3)
+    );
+    const filterPromise = storage.get([
+      "keywords",
+      "blocked_users",
+      "blockedDogcons",
+      "blockedDogconGroups",
+      "hideNotice",
+      "hidePopular",
+      "hideSidebar",
+      "compactMode",
+      "disableVote",
+      "preventYoutubeAlgorithm",
+      "contentWidth",
+      "blockMethod",
+      "userMemos",
+      "readabilityMode",
+      "legacyToolbar",
+      "hiddenMenus",
+      "hiddenSubMenus",
+      "hideLevelIcon"
+    ]).then((result) => {
+      const filterKeywords = result.keywords || [];
+      const blockedUsers = result.blocked_users || [];
+      const blockedDogcons = result.blockedDogcons || [];
+      const blockedDogconGroups = result.blockedDogconGroups || [];
+      const isBlindMode = result.blockMethod === "blind";
+      const isBadgeMode = result.blockMethod === "badge";
+      const rawMemos = Array.isArray(result.userMemos) ? result.userMemos : [];
+      const memoMap = new Map(
+        rawMemos.map((m) => [String(m.member_num), m])
+      );
+      const blockedMemberIds = blockedUsers.map((u) => String(u.member_num).trim()).filter((id) => id !== "");
+      const blockedUserMap = new Map(
+        blockedUsers.map((u) => [String(u.member_num).trim(), u])
+      );
+      const blockedDogconIds = blockedDogcons.map((item) => item.id);
+      const blockedDogconGroupIds = blockedDogconGroups.map(
+        (item) => item.id
+      );
+      const htmlEl = document.documentElement;
+      if (htmlEl) {
+        if (result.contentWidth && result.contentWidth.trim() !== "") {
+          htmlEl.style.setProperty(
+            "--ext-custom-width",
+            result.contentWidth.trim()
+          );
+        }
+        if (result.hideNotice === true) htmlEl.classList.add("ext-hide-notice");
+        if (result.hidePopular === true)
+          htmlEl.classList.add("ext-hide-popular");
+        if (result.hideSidebar === true)
+          htmlEl.classList.add("ext-hide-sidebar");
+        if (result.compactMode === true)
+          htmlEl.classList.add("ext-hide-compact");
+        if (result.disableVote === true) htmlEl.classList.add("ext-hide-vote");
+        if (result.readabilityMode === true)
+          htmlEl.classList.add("ext-readability-mode");
+        else htmlEl.classList.remove("ext-readability-mode");
+        if (result.legacyToolbar === true)
+          htmlEl.classList.add("ext-legacy-toolbar");
+        else htmlEl.classList.remove("ext-legacy-toolbar");
+        if (result.hideLevelIcon === true)
+          htmlEl.classList.add("ext-hide-level-icon");
+        else htmlEl.classList.remove("ext-hide-level-icon");
+      }
+      function getMemoData(mid) {
+        const entry = memoMap.get(String(mid));
+        if (!entry) return { text: "", color: "blue" };
+        return { text: entry.memo || "", color: entry.color || "blue" };
+      }
+      document.querySelectorAll("li.webzine").forEach((article) => {
+        const titleElement = article.querySelector(".title-link");
+        const nicknameElement = article.querySelector(
+          'a[class*="member_"]'
+        );
+        let shouldRemove = false;
+        let shouldBlind = false;
+        if (titleElement && filterKeywords.length > 0) {
+          const titleText = titleElement.textContent.trim();
+          if (filterKeywords.some(
+            (kw) => checkKeywordMatchCondition(titleText, kw, "posts")
+          )) {
+            shouldRemove = true;
+          }
+        }
+        let currentMemberId = "";
+        if (nicknameElement) {
+          const match = nicknameElement.className.match(/member_(\d+)/);
+          if (match) {
+            currentMemberId = match[1];
+            if (blockedMemberIds.includes(currentMemberId))
+              shouldBlind = true;
+          }
+        }
+        if (shouldRemove) {
+          article.remove();
+          return;
+        }
+        if (shouldBlind) {
+          if (isBadgeMode) {
+            if (currentMemberId && nicknameElement && !article.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) nicknameElement.after(blockBadge);
+            }
+            article.classList.add("ext-blocked-user-layout");
+            return;
+          }
+          if (article.dataset.extFiltered) return;
+          article.dataset.extFiltered = "true";
+          if (isBlindMode) {
+            if (nicknameElement && !article.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) nicknameElement.after(blockBadge);
+            }
+            const cacheHTML = article.innerHTML;
+            article.innerHTML = buildBlindWrapperHTML("\uAC8C\uC2DC\uAE00", cacheHTML);
+            attachBlindToggleEvents(article);
+          } else {
+            article.remove();
+          }
+        } else if (currentMemberId && memoMap.has(currentMemberId)) {
+          if (nicknameElement && !article.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+            const memoData = getMemoData(currentMemberId);
+            const badge = createMemoBadgeElement(
+              currentMemberId,
+              memoData.text,
+              memoData.color
+            );
+            if (badge) nicknameElement.after(badge);
+          }
+        }
+      });
+      document.querySelectorAll(
+        "li span.title a, li div.eq span.text-link"
+      ).forEach((titleEl) => {
+        const parentLi = titleEl.closest("li");
+        if (!parentLi) return;
+        const nicknameElement = parentLi.querySelector(
+          'a[class*="member_"]'
+        );
+        let currentMemberId = "";
+        if (nicknameElement) {
+          const match = nicknameElement.className.match(/member_(\d+)/);
+          if (match) currentMemberId = match[1];
+        }
+        if (filterKeywords.length > 0) {
+          const titleText = titleEl.textContent.trim();
+          if (filterKeywords.some(
+            (kw) => checkKeywordMatchCondition(titleText, kw, "posts")
+          )) {
+            parentLi.remove();
+            return;
+          }
+        }
+        if (currentMemberId && blockedMemberIds.includes(currentMemberId)) {
+          if (isBadgeMode) {
+            if (nicknameElement && !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) nicknameElement.after(blockBadge);
+            }
+            parentLi.style.backgroundColor = "#fff1f2";
+            parentLi.classList.add("ext-blocked-user-layout");
+            return;
+          }
+          if (parentLi.dataset.extFiltered) return;
+          parentLi.dataset.extFiltered = "true";
+          if (isBlindMode) {
+            if (nicknameElement && !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) nicknameElement.after(blockBadge);
+            }
+            const cacheHTML = parentLi.innerHTML;
+            parentLi.innerHTML = buildBlindWrapperHTML("\uAC8C\uC2DC\uAE00", cacheHTML);
+            attachBlindToggleEvents(parentLi);
+          } else {
+            parentLi.remove();
+          }
+        } else if (currentMemberId && memoMap.has(currentMemberId)) {
+          if (nicknameElement && !parentLi.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+            const memoData = getMemoData(currentMemberId);
+            const badge = createMemoBadgeElement(
+              currentMemberId,
+              memoData.text,
+              memoData.color
+            );
+            if (badge) nicknameElement.after(badge);
+          }
+        }
+      });
+      document.querySelectorAll("tr.ed").forEach((row) => {
+        const titleElement = row.querySelector(".title");
+        const authorElement = row.querySelector(
+          ".author a[class*='member_']"
+        );
+        let shouldRemove = false;
+        let shouldBlind = false;
+        if (titleElement && filterKeywords.length > 0) {
+          const realTitleLink = titleElement.querySelector(".title-link");
+          let titleText = "";
+          if (realTitleLink) {
+            titleText = realTitleLink.textContent.trim();
+          } else {
+            const mainLink = titleElement.querySelector(
+              'a[href*="dogdrip.net/"], a[href^="/"]'
+            );
+            if (mainLink) {
+              const cloneLink = mainLink.cloneNode(true);
+              const replyBadge = cloneLink.querySelector(".text-primary");
+              if (replyBadge) replyBadge.remove();
+              titleText = cloneLink.textContent.replace(/\[.*?\]/g, "").trim();
+            } else {
+              titleText = titleElement.textContent.trim();
+            }
+          }
+          const cleanTitleText = titleText.replace(/[\s\n\r\t]+/g, " ").trim();
+          if (filterKeywords.some(
+            (kw) => checkKeywordMatchCondition(cleanTitleText, kw, "posts")
+          )) {
+            shouldRemove = true;
+          }
+        }
+        let currentMemberId = "";
+        if (authorElement) {
+          const match = authorElement.className.match(/member_(\d+)/);
+          if (match) {
+            currentMemberId = match[1];
+            if (blockedMemberIds.includes(currentMemberId)) shouldBlind = true;
+          }
+        }
+        if (shouldRemove) {
+          row.remove();
+          return;
+        }
+        if (shouldBlind) {
+          if (isBadgeMode) {
+            if (currentMemberId && authorElement && !row.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) authorElement.after(blockBadge);
+            }
+            row.style.backgroundColor = "#fff1f2";
+            row.classList.add("ext-blocked-user-layout");
+            return;
+          }
+          if (row.dataset.extFiltered) return;
+          row.dataset.extFiltered = "true";
+          if (isBlindMode) {
+            if (authorElement && !row.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) authorElement.after(blockBadge);
+            }
+            const colCount = row.querySelectorAll("td, th").length || 6;
+            const cacheHTML = row.innerHTML;
+            row.innerHTML = `<td colspan="${colCount}" style="padding: 0;">${buildBlindWrapperHTML("\uAC8C\uC2DC\uAE00", `<table style="width:100%"><tbody><tr>${cacheHTML}</tr></tbody></table>`)}</td>`;
+            attachBlindToggleEvents(row);
+          } else {
+            row.remove();
+          }
+        } else if (currentMemberId && memoMap.has(currentMemberId)) {
+          if (authorElement && !row.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+            const memoData = getMemoData(currentMemberId);
+            const badge = createMemoBadgeElement(
+              currentMemberId,
+              memoData.text,
+              memoData.color
+            );
+            if (badge) authorElement.after(badge);
+          }
+        }
+      });
+      document.querySelectorAll(".ed.comment-content").forEach((comment) => {
+        const nicknameElement = comment.querySelector(
+          'a[class*="member_"]'
+        );
+        let shouldKeywordRemove = false;
+        const commentBodyTextEl = comment.querySelector(
+          ".xe_content, .comment-text"
+        );
+        if (commentBodyTextEl && filterKeywords.length > 0) {
+          const rawContent = (commentBodyTextEl.innerText || commentBodyTextEl.textContent || "").replace(/[\s\n\r\t]+/g, " ");
+          const commentText = rawContent.trim();
+          if (filterKeywords.some(
+            (kw) => checkKeywordMatchCondition(commentText, kw, "comments")
+          )) {
+            shouldKeywordRemove = true;
+          }
+        }
+        if (shouldKeywordRemove) {
+          const totalCommentTarget = comment.closest("li, div.comment-item") || comment;
+          if (totalCommentTarget.dataset.extFiltered) return;
+          totalCommentTarget.dataset.extFiltered = "true";
+          if (isBlindMode) {
+            const cacheHTML = totalCommentTarget.innerHTML;
+            totalCommentTarget.innerHTML = buildBlindWrapperHTML(
+              "\uD0A4\uC6CC\uB4DC\uAC00 \uD3EC\uD568\uB41C \uB313\uAE00",
+              cacheHTML
+            );
+            attachBlindToggleEvents(totalCommentTarget);
+          } else {
+            totalCommentTarget.remove();
+          }
+          return;
+        }
+        let currentMemberId = "";
+        if (nicknameElement) {
+          const match = nicknameElement.className.match(/member_(\d+)/);
+          if (match) currentMemberId = match[1];
+        }
+        if (currentMemberId && blockedMemberIds.length > 0 && blockedMemberIds.includes(currentMemberId)) {
+          const totalCommentTarget = comment.closest("li, div.comment-item") || comment;
+          if (isBadgeMode) {
+            if (nicknameElement && !comment.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) nicknameElement.after(blockBadge);
+            }
+            totalCommentTarget.style.backgroundColor = "#fff1f2";
+            totalCommentTarget.classList.add("ext-blocked-user-layout");
+            return;
+          }
+          if (totalCommentTarget.dataset.extFiltered) return;
+          totalCommentTarget.dataset.extFiltered = "true";
+          if (isBlindMode) {
+            if (nicknameElement && !totalCommentTarget.querySelector(
+              `.ext-badge-id-${currentMemberId}`
+            )) {
+              const userObj = blockedUserMap.get(currentMemberId);
+              const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+              const blockBadge = createMemoBadgeElement(
+                currentMemberId,
+                badgeLabel,
+                "red-solid"
+              );
+              if (blockBadge) nicknameElement.after(blockBadge);
+            }
+            const cacheHTML = totalCommentTarget.innerHTML;
+            totalCommentTarget.innerHTML = buildBlindWrapperHTML(
+              "\uB313\uAE00",
+              cacheHTML
+            );
+            attachBlindToggleEvents(totalCommentTarget);
+          } else {
+            totalCommentTarget.remove();
+          }
+          return;
+        }
+        if (nicknameElement && currentMemberId && memoMap.has(currentMemberId)) {
+          if (!comment.querySelector(`.ext-badge-id-${currentMemberId}`)) {
+            const memoData = getMemoData(currentMemberId);
+            const badge = createMemoBadgeElement(
+              currentMemberId,
+              memoData.text,
+              memoData.color
+            );
+            if (badge) nicknameElement.after(badge);
+          }
+        }
+        if (nicknameElement && currentMemberId) {
+          const nicknameText = nicknameElement.textContent.trim();
+          const dropdownMenu = comment.querySelector("ul.dropdown-menu");
+          if (dropdownMenu) {
+            const emptyLis = Array.from(
+              dropdownMenu.querySelectorAll("li")
+            ).filter((li) => li.innerHTML.trim() === "");
+            if (emptyLis.length > 0) {
+              const targetLi = emptyLis[0];
+              if (!targetLi.querySelector(".ext-block-menu-item")) {
+                targetLi.innerHTML = `<a class="ext-block-menu-item"><span class="ed icon"><i class="fas fa-user-slash"></i></span>\uCC28\uB2E8</a>`;
+                targetLi.querySelector("a").addEventListener("click", (e) => {
+                  e.preventDefault();
+                  openBlockModal(nicknameText, currentMemberId);
+                });
+              }
+            }
+          }
+        }
+      });
+      const titleToolbar = document.querySelector(".title-toolbar");
+      if (titleToolbar) {
+        const authorElement = titleToolbar.querySelector(
+          'a[class*="member_"]'
+        );
+        const dropdownMenu = titleToolbar.querySelector("ul.dropdown-menu");
+        if (authorElement && dropdownMenu) {
+          const authorMemberId = authorElement.className.match(/member_(\d+)/)?.[1];
+          if (authorMemberId) {
+            if (blockedMemberIds.includes(authorMemberId)) {
+              if (!authorElement.querySelector(
+                `.ext-badge-id-${authorMemberId}`
+              ) && !authorElement.nextElementSibling?.classList.contains(
+                "ext-user-memo-badge"
+              )) {
+                const userObj = blockedUserMap.get(authorMemberId);
+                const badgeLabel = userObj && userObj.memo && userObj.memo.trim() !== "" ? userObj.memo.trim() : "\uCC28\uB2E8\uB428";
+                const blockBadge = createMemoBadgeElement(
+                  authorMemberId,
+                  badgeLabel,
+                  "red-solid"
+                );
+                if (blockBadge) authorElement.after(blockBadge);
+              }
+            } else if (memoMap.has(authorMemberId) && !authorElement.nextElementSibling?.classList.contains(
+              "ext-user-memo-badge"
+            )) {
+              const memoData = getMemoData(authorMemberId);
+              const badge = createMemoBadgeElement(
+                authorMemberId,
+                memoData.text,
+                memoData.color
+              );
+              if (badge) authorElement.after(badge);
+            }
+            const existingToolbarBtn = dropdownMenu.querySelector(
+              ".ext-toolbar-member-block"
+            );
+            if (existingToolbarBtn) existingToolbarBtn.remove();
+            const blockLi = document.createElement("li");
+            blockLi.className = "ext-toolbar-member-block";
+            if (blockedMemberIds.includes(authorMemberId)) {
+              blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${GRANT_COLOR}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-check"></i></span> \uCC28\uB2E8 \uD574\uC81C</a>`;
+              blockLi.querySelector("a").addEventListener("click", (e) => {
+                e.preventDefault();
+                storage.get(["blocked_users"]).then((res) => {
+                  let currentList = res.blocked_users || [];
+                  currentList = currentList.filter(
+                    (item) => String(item.member_num) !== String(authorMemberId)
+                  );
+                  storage.set({ blocked_users: currentList }).then(() => {
+                    window.location.reload();
+                  });
+                });
+              });
+            } else {
+              blockLi.innerHTML = `<a class="ext-block-menu-item" href="#popup_menu_area" onclick="return false;" style="color: #${BLOCK_COLOR}; font-weight: bold;"><span class="ed icon"><i class="fas fa-user-slash"></i></span> \uCC28\uB2E8</a>`;
+              blockLi.querySelector("a").addEventListener("click", (e) => {
+                e.preventDefault();
+                openBlockModal(
+                  authorElement.textContent.trim(),
+                  authorMemberId
+                );
+              });
+            }
+            dropdownMenu.insertBefore(blockLi, dropdownMenu.firstChild);
+          }
+        }
+      }
+      document.querySelectorAll(".ed.dropdown .ed.dropdown-menu").forEach((menu) => {
+        injectDownloadAllButton(menu);
+      });
+      const dogconImgs = document.querySelectorAll(
+        "img.dogcon-clickable, img[data-dogcon-srl]"
+      );
+      dogconImgs.forEach((img) => {
+        const srl = img.getAttribute("data-dogcon-srl");
+        const fileSrl = img.getAttribute("data-dogcon-file-srl");
+        const title = img.getAttribute("data-title") || img.getAttribute("title") || "\uAC1C\uB4DC\uB9BD\uCF58";
+        const alt = img.getAttribute("alt") || "\uCF58";
+        if (img.dataset.extProcessed) return;
+        img.dataset.extProcessed = "true";
+        const isGroupBlocked = blockedDogconGroupIds.includes(srl);
+        const isSingleBlocked = blockedDogconIds.includes(fileSrl);
+        const infoUrl = `https://www.dogdrip.net/?mid=dogcon&dogcon_srl=${srl}`;
+        if (isGroupBlocked || isSingleBlocked) {
+          const blockDiv = document.createElement("div");
+          blockDiv.className = "ext-dogcon-blocked";
+          blockDiv.innerHTML = `\u{1F6AB} <span>${title} (${alt}) \uCC28\uB2E8\uB428</span><a href="${infoUrl}" target="_blank" class="dogcon-info-link" style="margin-left:6px; color:#0284c7; text-decoration:underline; font-weight:bold;">[\u2139\uFE0F \uC815\uBCF4]</a>`;
+          blockDiv.querySelector(".dogcon-info-link").addEventListener("click", (e) => {
+            e.stopPropagation();
+          });
+          blockDiv.dataset.srl = srl;
+          blockDiv.dataset.fileSrl = fileSrl;
+          blockDiv.dataset.title = title;
+          blockDiv.dataset.alt = alt;
+          blockDiv.dataset.isSingleBlocked = String(isSingleBlocked);
+          blockDiv.dataset.isGroupBlocked = String(isGroupBlocked);
+          blockDiv.addEventListener("click", (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            openDogconMenu(e, blockDiv, true);
+          });
+          img.parentNode.insertBefore(blockDiv, img);
+          img.remove();
+        } else {
+          img.addEventListener("click", (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const mockDataElement = document.createElement("div");
+            mockDataElement.dataset.srl = srl;
+            mockDataElement.dataset.fileSrl = fileSrl;
+            mockDataElement.dataset.title = title;
+            mockDataElement.dataset.alt = alt;
+            mockDataElement.dataset.isSingleBlocked = "false";
+            mockDataElement.dataset.isGroupBlocked = "false";
+            openDogconMenu(e, mockDataElement, false);
+          });
+        }
+      });
+      if (result.disableVote === true) {
+        document.querySelectorAll("td.ed.voteNum.text-primary").forEach((td) => {
+          if (!td.dataset.extVoteProcessed) {
+            td.dataset.extVoteProcessed = "true";
+            td.innerHTML = '<i class="fas fa-baby"></i>';
+          }
+        });
+        document.querySelectorAll("i.far.fa-thumbs-up").forEach((icon) => {
+          if (!icon.dataset.extVoteProcessed) {
+            icon.dataset.extVoteProcessed = "true";
+            icon.className = "fas fa-baby";
+            const parent = icon.closest("span.text-primary");
+            if (parent?.nextElementSibling?.classList.contains("text-primary"))
+              parent.nextElementSibling.remove();
+          }
+        });
+        document.querySelectorAll("a.votebtn").forEach((btn) => {
+          if (btn.dataset.extVoteProcessed) return;
+          btn.dataset.extVoteProcessed = "true";
+          if (btn.getAttribute("title") === "\uCD94\uCC9C") {
+            const icon = btn.querySelector("i");
+            if (icon) icon.className = "fas fa-baby";
+            const count = btn.querySelector("span.count");
+            if (count) count.remove();
+            const parent = btn.parentElement;
+            if (parent?.tagName.toLowerCase() === "span") {
+              parent.parentNode.insertBefore(btn, parent);
+              parent.remove();
+            }
+          }
+          if (btn.getAttribute("title") === "\uBE44\uCD94\uCC9C") btn.remove();
+        });
+        document.querySelectorAll("a.comment-item-tool").forEach((link) => {
+          link.classList.remove("border-left-dotted");
+        });
+      }
+      if (result.preventYoutubeAlgorithm === true) {
+        document.querySelectorAll(
+          'iframe[src*="youtube.com/embed/"]'
+        ).forEach((iframe) => {
+          if (!iframe.dataset.extYoutubeProcessed) {
+            iframe.dataset.extYoutubeProcessed = "true";
+            const src = iframe.getAttribute("src");
+            if (src)
+              iframe.setAttribute(
+                "src",
+                src.replace(
+                  "youtube.com/embed/",
+                  "youtube-nocookie.com/embed/"
+                )
+              );
+          }
+        });
+      }
+      if (!result.contentWidth || result.contentWidth.trim() === "") {
+        document.querySelectorAll(".container").forEach((el) => {
+          el.style.maxWidth = "960px";
+        });
+      }
+      const hiddenMenus = result.hiddenMenus || [];
+      const hiddenSubMenus = result.hiddenSubMenus || [];
+      if (hiddenMenus.length > 0 || hiddenSubMenus.length > 0) {
+        const navLists = document.querySelectorAll(
+          ".eq.navbar-nav, .eq.nav-menu"
+        );
+        navLists.forEach((navList) => {
+          navList.querySelectorAll(":scope > li").forEach((topLi) => {
+            const firstLink = topLi.querySelector("a[href]");
+            if (!firstLink) return;
+            try {
+              const url = new URL(firstLink.href, location.origin);
+              const topMid = url.pathname.split("/").filter(Boolean)[0] || "";
+              if (hiddenMenus.includes(topMid)) {
+                topLi.style.display = "none";
+                return;
+              }
+              if (hiddenSubMenus.length > 0) {
+                const subLinks = topLi.querySelectorAll(
+                  "ul a[href], .child a[href]"
+                );
+                subLinks.forEach((subLink) => {
+                  const subUrl = new URL(subLink.href, location.origin);
+                  const subMid = resolveSubMid(subUrl);
+                  if (hiddenSubMenus.includes(subMid)) {
+                    const subLi = subLink.closest("li");
+                    if (subLi) subLi.style.display = "none";
+                  }
+                });
+              }
+            } catch {
+            }
+          });
+        });
+      }
+      if (hiddenMenus.length > 0 || hiddenSubMenus.length > 0) {
+        document.querySelectorAll(".xe-widget-wrapper").forEach((widget) => {
+          const titleEl = widget.querySelector(
+            ".widget-title-text, .eq.widget-title h4, .eq.widget-title .col-6:first-child"
+          );
+          if (!titleEl) return;
+          const titleLink = titleEl.querySelector("a[href]");
+          if (!titleLink) return;
+          try {
+            const href = titleLink.getAttribute("href") || "";
+            const url = new URL(href, location.origin);
+            const topMid = url.pathname.split("/").filter(Boolean)[0] || "";
+            if (topMid && hiddenMenus.includes(topMid)) {
+              widget.style.display = "none";
+              return;
+            }
+            if (hiddenSubMenus.length > 0) {
+              const subMid = resolveSubMid(url);
+              if (subMid && hiddenSubMenus.includes(subMid)) {
+                widget.style.display = "none";
+              }
+            }
+          } catch {
+          }
+        });
+      }
+      function resolveSubMid(url) {
+        const pathname = url.pathname;
+        const seg = pathname.split("/").filter(Boolean)[0] || "";
+        const sortIndex = url.searchParams.get("sort_index");
+        const category = url.searchParams.get("category");
+        const mid = url.searchParams.get("mid") || seg;
+        if (sortIndex) return `${mid}__${sortIndex}`;
+        if (category) return `${mid}__cat_${category}`;
+        return seg;
+      }
+      document.querySelectorAll("li.webzine").forEach((li) => {
+        if (li.dataset.extHotdealProcessed) return;
+        const titleLink = li.querySelector("a.title-link");
+        if (!titleLink) return;
+        const style = titleLink.getAttribute("style") || "";
+        if (!style.includes("line-through")) return;
+        li.dataset.extHotdealProcessed = "true";
+        li.style.position = "relative";
+        if (!li.querySelector(".ext-hotdeal-ended-overlay")) {
+          const overlay = document.createElement("div");
+          overlay.className = "ext-hotdeal-ended-overlay";
+          li.appendChild(overlay);
+        }
+      });
+      document.querySelectorAll("tr.ed").forEach((row) => {
+        if (row.dataset.extHotdealProcessed) return;
+        const titleLink = row.querySelector(
+          ".title a[data-document-srl], .title .title-link"
+        );
+        if (!titleLink) return;
+        const style = titleLink.getAttribute("style") || "";
+        if (!style.includes("line-through")) return;
+        row.dataset.extHotdealProcessed = "true";
+        row.classList.add("ext-hotdeal-ended-row");
+        const titleAnchor = row.querySelector(
+          "td.title a[data-document-srl]"
+        );
+        if (titleAnchor && !row.querySelector(".ext-hotdeal-badge")) {
+          const badge = document.createElement("span");
+          badge.className = "ext-hotdeal-badge";
+          badge.textContent = "\uC885\uB8CC";
+          titleAnchor.parentNode.insertBefore(badge, titleAnchor);
+        }
+      });
+      injectCopyLinkButton();
+    });
+    Promise.all([minTimePromise, filterPromise]).then(() => {
+      removeLoadingOverlay();
+    });
+  }
+
+  // src/common/versionCheck.ts
+  function getVersionWeightNumber(versionStr) {
+    if (!versionStr) return 0;
+    const parts = versionStr.replace(/[vV\s]/g, "").split(".").map(Number);
+    const major = parts[0] || 0;
+    const minor = parts[1] || 0;
+    const patch = parts[2] || 0;
+    return major * 1e6 + minor * 1e3 + patch;
+  }
+  function compareVer(a, b) {
+    return getVersionWeightNumber(a) - getVersionWeightNumber(b);
+  }
+
+  // src/common/colorPalette.ts
+  var colorPalette = [
+    { key: "blue", hex: "#3b82f6", name: "\uBE14\uB8E8" },
+    { key: "green", hex: "#10b981", name: "\uADF8\uB9B0" },
+    { key: "red", hex: "#ef4444", name: "\uB808\uB4DC" },
+    { key: "yellow", hex: "#f59e0b", name: "\uC610\uB85C\uC6B0" },
+    { key: "purple", hex: "#8b5cf6", name: "\uD37C\uD50C" },
+    { key: "pink", hex: "#ec4899", name: "\uD551\uD06C" },
+    { key: "cyan", hex: "#06b6d4", name: "\uC2DC\uC548" },
+    { key: "orange", hex: "#f97316", name: "\uC624\uB80C\uC9C0" },
+    { key: "teal", hex: "#14b8a6", name: "\uD2F0\uC77C" },
+    { key: "gray", hex: "#64748b", name: "\uADF8\uB808\uC774" }
+  ];
+
+  // src/mobile/main.ts
+  (function() {
+    "use strict";
+    const CURRENT_VERSION = "1.1.16";
+    const VERSION_URL = "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
+    const storage = new MobileStorage();
+    injectMobileCSS();
+    let targetNicknameToBlock = "";
+    let targetMemberIdToBlock = "";
+    let targetMemoMemberId = "";
+    let selectedMemoColorStyle = "blue";
+    let lastClickedUserData = { memberId: "", nickname: "" };
+    let currentActiveDogconData = null;
+    const blockModalEl = document.createElement("div");
+    blockModalEl.id = "ext-block-modal";
+    blockModalEl.className = "ext-modal-overlay";
+    blockModalEl.innerHTML = `
     <div class="ext-modal-box">
       <p class="ext-modal-title" id="ext-block-msg"></p>
       <p style="margin:0 0 6px;font-size:12px;color:#64748b;">\uCC28\uB2E8 \uC0AC\uC720 (\uC120\uD0DD)</p>
@@ -664,7 +2252,11 @@
         <button class="ext-btn ext-btn-ghost" id="ext-block-cancel">\uCDE8\uC18C</button>
         <button class="ext-btn ext-btn-danger" id="ext-block-confirm">\uCC28\uB2E8</button>
       </div>
-    </div>`;let v=document.createElement("div");v.id="ext-memo-modal",v.className="ext-modal-overlay",v.innerHTML=`
+    </div>`;
+    const memoModalEl = document.createElement("div");
+    memoModalEl.id = "ext-memo-modal";
+    memoModalEl.className = "ext-modal-overlay";
+    memoModalEl.innerHTML = `
     <div class="ext-modal-box">
       <p class="ext-modal-title" id="ext-memo-modal-title"></p>
       <input class="ext-modal-input" id="ext-memo-input" placeholder="\uC774 \uC0AC\uC6A9\uC790\uC5D0 \uB300\uD55C \uBA54\uBAA8..." />
@@ -675,7 +2267,559 @@
         <button class="ext-btn ext-btn-ghost" id="ext-memo-cancel">\uCDE8\uC18C</button>
         <button class="ext-btn ext-btn-primary" id="ext-memo-confirm">\uC800\uC7A5</button>
       </div>
-    </div>`;let q=document.createElement("div");q.id="ext-dogcon-menu";let N=document.createElement("div");N.id="ext-gear-wrap";let I=document.createElement("div");I.id="ext-update-badge",I.textContent="NEW";let D=document.createElement("button");D.id="ext-gear-btn",D.title="\uAC1C\uB4DC\uB9BD Plus+ \uC124\uC815",D.textContent="\u2699\uFE0F",N.appendChild(I),N.appendChild(D);let W=document.createElement("div");W.id="ext-settings-panel",W.innerHTML=Ee();function R(){return document.documentElement?(document.getElementById("ext-block-modal")||(document.documentElement.appendChild(k),document.documentElement.appendChild(v),document.documentElement.appendChild(q),document.documentElement.appendChild(N),document.documentElement.appendChild(W),ie(),J(),we(r,D,I,W,t)),!0):!1}if(!R()){let d=new MutationObserver(()=>{R()&&d.disconnect()});d.observe(document,{childList:!0,subtree:!0})}function z(d,m){n=d,f=m,document.getElementById("ext-block-reason").value="",document.getElementById("ext-block-msg").innerHTML=`<strong>${d}${m?`(${m})`:""}</strong>\uB2D8\uC744 \uCC28\uB2E8\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?<br/><small style="color:#64748b;">\uCC28\uB2E8 \uC2DC \uD574\uB2F9 \uC0AC\uC6A9\uC790\uC758 \uAE00\xB7\uB313\uAE00\uC774 \uC228\uACA8\uC9D1\uB2C8\uB2E4.</small>`,k.classList.add("show"),setTimeout(()=>document.getElementById("ext-block-reason").focus(),50)}function C(){k.classList.remove("show"),n="",f=""}function ie(){k.querySelector("#ext-block-reason")?.addEventListener("input",m=>{m.target.value=m.target.value.replace(/[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9.,\s]/g,"")}),k.querySelector("#ext-block-cancel")?.addEventListener("click",C),k.addEventListener("click",m=>{m.target===k&&C()}),k.querySelector("#ext-block-confirm")?.addEventListener("click",()=>{if(!n||!f){C();return}let m=k.querySelector("#ext-block-reason").value.trim(),s={date:new Date().toISOString().slice(0,10),member_num:String(f).trim(),memo:m};r.get(["blocked_users"]).then(L=>{let S=L.blocked_users||[];S.some(H=>String(H.member_num)===String(f))?(alert("\uC774\uBBF8 \uCC28\uB2E8\uB41C \uC0AC\uC6A9\uC790\uC785\uB2C8\uB2E4."),C()):(S.push(s),r.set({blocked_users:S}).then(()=>{C(),location.reload()}))})})}function ae(d,m,x){i=m;let s="",L="blue";if(x)if(x.includes(":")){let H=x.split(":");s=H[0],L=H[1]||"blue"}else s=x;w=L,document.getElementById("ext-memo-modal-title").innerHTML=`\u{1F4DD} <strong>${d}</strong> \uBA54\uBAA8`;let S=document.getElementById("ext-memo-input");S.value=s,document.getElementById("ext-memo-delete").style.display=s?"block":"none",U(),v.classList.add("show"),setTimeout(()=>S.focus(),50)}function _(){v.classList.remove("show"),i=""}function U(){let d=document.getElementById("ext-memo-color-picker");d&&(d.innerHTML="",Be.forEach(m=>{let x=document.createElement("div");x.className=`ext-color-chip${w===m.key?" selected":""}`,x.style.background=m.hex,x.title=m.key,x.addEventListener("click",()=>{w=m.key,d.querySelectorAll(".ext-color-chip").forEach(s=>s.classList.remove("selected")),x.classList.add("selected")}),d.appendChild(x)}))}function J(){v.querySelector("#ext-memo-cancel")?.addEventListener("click",_),v.addEventListener("click",x=>{x.target===v&&_()});let d=v.querySelector("#ext-memo-input"),m=v.querySelector("#ext-memo-confirm");d?.addEventListener("keydown",x=>{x.key==="Enter"&&(x.preventDefault(),m.click())}),m?.addEventListener("click",()=>{if(!i){_();return}let x=d.value.trim();r.get(["userMemos"]).then(s=>{let L=s.userMemos||{};x?L[i]=`${x}:${w}`:delete L[i],r.set({userMemos:L}).then(()=>{_(),location.reload()})})}),v.querySelector("#ext-memo-delete")?.addEventListener("click",()=>{if(!i){_();return}r.get(["userMemos"]).then(x=>{let s=x.userMemos||{};delete s[i],r.set({userMemos:s}).then(()=>{_(),location.reload()})})})}function be(d,m,x){a={srl:m.dataset.srl,fileSrl:m.dataset.fileSrl,title:m.dataset.title,alt:m.dataset.alt,isSingleBlocked:m.dataset.isSingleBlocked==="true",isGroupBlocked:m.dataset.isGroupBlocked==="true"};let s=a,L=`https://www.dogdrip.net/?mid=dogcon&dogcon_srl=${s.srl}`,S=s.isSingleBlocked?"\u{1F7E2} \uC774 \uAC1C\uB4DC\uB9BD\uCF58 \uCC28\uB2E8 \uD574\uC81C":"\u274C \uC774 \uAC1C\uB4DC\uB9BD\uCF58\uB9CC \uCC28\uB2E8",H=s.isGroupBlocked?"\u{1F7E2} \uC774 \uADF8\uB8F9 \uC804\uCCB4 \uCC28\uB2E8 \uD574\uC81C":"\u274C \uC774 \uAC1C\uB4DC\uB9BD\uCF58 \uADF8\uB8F9 \uC804\uCCB4 \uCC28\uB2E8",V=s.isSingleBlocked?"unblock-action":"block-action",X=s.isGroupBlocked?"unblock-action":"block-action",B=s.isGroupBlocked?"":`<div class="dogcon-menu-item ${V}" id="ext-dc-single">${S}</div>`;q.innerHTML=`${B}<div class="dogcon-menu-item ${X}" id="ext-dc-group">${H}</div>
+    </div>`;
+    const dogconMenuEl = document.createElement("div");
+    dogconMenuEl.id = "ext-dogcon-menu";
+    const gearWrap = document.createElement("div");
+    gearWrap.id = "ext-gear-wrap";
+    const gearUpdateBadge = document.createElement("div");
+    gearUpdateBadge.id = "ext-update-badge";
+    gearUpdateBadge.textContent = "NEW";
+    const gearBtn = document.createElement("button");
+    gearBtn.id = "ext-gear-btn";
+    gearBtn.title = "\uAC1C\uB4DC\uB9BD Plus+ \uC124\uC815";
+    gearBtn.textContent = "\u2699\uFE0F";
+    gearWrap.appendChild(gearUpdateBadge);
+    gearWrap.appendChild(gearBtn);
+    const settingsPanel = document.createElement("div");
+    settingsPanel.id = "ext-settings-panel";
+    settingsPanel.innerHTML = buildSettingsPanelHTML();
+    function appendUI() {
+      if (!document.documentElement) return false;
+      if (document.getElementById("ext-block-modal")) return true;
+      document.documentElement.appendChild(blockModalEl);
+      document.documentElement.appendChild(memoModalEl);
+      document.documentElement.appendChild(dogconMenuEl);
+      document.documentElement.appendChild(gearWrap);
+      document.documentElement.appendChild(settingsPanel);
+      bindBlockModal();
+      bindMemoModal();
+      bindGearAndPanel(
+        storage,
+        gearBtn,
+        gearUpdateBadge,
+        settingsPanel,
+        CURRENT_VERSION
+      );
+      return true;
+    }
+    if (!appendUI()) {
+      const obs = new MutationObserver(() => {
+        if (appendUI()) obs.disconnect();
+      });
+      obs.observe(document, { childList: true, subtree: true });
+    }
+    function openBlockModal(nickname, memberId) {
+      targetNicknameToBlock = nickname;
+      targetMemberIdToBlock = memberId;
+      document.getElementById("ext-block-reason").value = "";
+      document.getElementById("ext-block-msg").innerHTML = `<strong>${nickname}${memberId ? `(${memberId})` : ""}</strong>\uB2D8\uC744 \uCC28\uB2E8\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?<br/><small style="color:#64748b;">\uCC28\uB2E8 \uC2DC \uD574\uB2F9 \uC0AC\uC6A9\uC790\uC758 \uAE00\xB7\uB313\uAE00\uC774 \uC228\uACA8\uC9D1\uB2C8\uB2E4.</small>`;
+      blockModalEl.classList.add("show");
+      setTimeout(
+        () => document.getElementById("ext-block-reason").focus(),
+        50
+      );
+    }
+    function closeBlockModal() {
+      blockModalEl.classList.remove("show");
+      targetNicknameToBlock = "";
+      targetMemberIdToBlock = "";
+    }
+    function bindBlockModal() {
+      const reasonInput = blockModalEl.querySelector(
+        "#ext-block-reason"
+      );
+      reasonInput?.addEventListener("input", (e) => {
+        e.target.value = e.target.value.replace(/[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9.,\s]/g, "");
+      });
+      blockModalEl.querySelector("#ext-block-cancel")?.addEventListener("click", closeBlockModal);
+      blockModalEl.addEventListener("click", (e) => {
+        if (e.target === blockModalEl) closeBlockModal();
+      });
+      blockModalEl.querySelector("#ext-block-confirm")?.addEventListener("click", () => {
+        if (!targetNicknameToBlock || !targetMemberIdToBlock) {
+          closeBlockModal();
+          return;
+        }
+        const reason = blockModalEl.querySelector("#ext-block-reason").value.trim();
+        const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+        const newUser = {
+          date: today,
+          member_num: String(targetMemberIdToBlock).trim(),
+          memo: reason
+        };
+        storage.get(["blocked_users"]).then((r) => {
+          const list = r.blocked_users || [];
+          if (!list.some(
+            (x) => String(x.member_num) === String(targetMemberIdToBlock)
+          )) {
+            list.push(newUser);
+            storage.set({ blocked_users: list }).then(() => {
+              closeBlockModal();
+              location.reload();
+            });
+          } else {
+            alert("\uC774\uBBF8 \uCC28\uB2E8\uB41C \uC0AC\uC6A9\uC790\uC785\uB2C8\uB2E4.");
+            closeBlockModal();
+          }
+        });
+      });
+    }
+    function openMemoModal(nickname, memberId, rawData) {
+      targetMemoMemberId = memberId;
+      let text = "", selectedColor = "blue";
+      if (rawData) {
+        if (rawData.includes(":")) {
+          const p = rawData.split(":");
+          text = p[0];
+          selectedColor = p[1] || "blue";
+        } else text = rawData;
+      }
+      selectedMemoColorStyle = selectedColor;
+      document.getElementById("ext-memo-modal-title").innerHTML = `\u{1F4DD} <strong>${nickname}</strong> \uBA54\uBAA8`;
+      const inp = document.getElementById("ext-memo-input");
+      inp.value = text;
+      document.getElementById("ext-memo-delete").style.display = text ? "block" : "none";
+      renderColorPicker();
+      memoModalEl.classList.add("show");
+      setTimeout(() => inp.focus(), 50);
+    }
+    function closeMemoModal() {
+      memoModalEl.classList.remove("show");
+      targetMemoMemberId = "";
+    }
+    function renderColorPicker() {
+      const picker = document.getElementById("ext-memo-color-picker");
+      if (!picker) return;
+      picker.innerHTML = "";
+      colorPalette.forEach((c) => {
+        const chip = document.createElement("div");
+        chip.className = `ext-color-chip${selectedMemoColorStyle === c.key ? " selected" : ""}`;
+        chip.style.background = c.hex;
+        chip.title = c.key;
+        chip.addEventListener("click", () => {
+          selectedMemoColorStyle = c.key;
+          picker.querySelectorAll(".ext-color-chip").forEach((x) => x.classList.remove("selected"));
+          chip.classList.add("selected");
+        });
+        picker.appendChild(chip);
+      });
+    }
+    function bindMemoModal() {
+      memoModalEl.querySelector("#ext-memo-cancel")?.addEventListener("click", closeMemoModal);
+      memoModalEl.addEventListener("click", (e) => {
+        if (e.target === memoModalEl) closeMemoModal();
+      });
+      const inp = memoModalEl.querySelector(
+        "#ext-memo-input"
+      );
+      const confirmBtn = memoModalEl.querySelector("#ext-memo-confirm");
+      inp?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          confirmBtn.click();
+        }
+      });
+      confirmBtn?.addEventListener("click", () => {
+        if (!targetMemoMemberId) {
+          closeMemoModal();
+          return;
+        }
+        const text = inp.value.trim();
+        storage.get(["userMemos"]).then((r) => {
+          const memos = r.userMemos || {};
+          if (text)
+            memos[targetMemoMemberId] = `${text}:${selectedMemoColorStyle}`;
+          else delete memos[targetMemoMemberId];
+          storage.set({ userMemos: memos }).then(() => {
+            closeMemoModal();
+            location.reload();
+          });
+        });
+      });
+      memoModalEl.querySelector("#ext-memo-delete")?.addEventListener("click", () => {
+        if (!targetMemoMemberId) {
+          closeMemoModal();
+          return;
+        }
+        storage.get(["userMemos"]).then((r) => {
+          const memos = r.userMemos || {};
+          delete memos[targetMemoMemberId];
+          storage.set({ userMemos: memos }).then(() => {
+            closeMemoModal();
+            location.reload();
+          });
+        });
+      });
+    }
+    function openDogconMenu(e, dataEl, _isBlocked) {
+      currentActiveDogconData = {
+        srl: dataEl.dataset.srl,
+        fileSrl: dataEl.dataset.fileSrl,
+        title: dataEl.dataset.title,
+        alt: dataEl.dataset.alt,
+        isSingleBlocked: dataEl.dataset.isSingleBlocked === "true",
+        isGroupBlocked: dataEl.dataset.isGroupBlocked === "true"
+      };
+      const d = currentActiveDogconData;
+      const infoUrl = `https://www.dogdrip.net/?mid=dogcon&dogcon_srl=${d.srl}`;
+      const singleText = d.isSingleBlocked ? "\u{1F7E2} \uC774 \uAC1C\uB4DC\uB9BD\uCF58 \uCC28\uB2E8 \uD574\uC81C" : "\u274C \uC774 \uAC1C\uB4DC\uB9BD\uCF58\uB9CC \uCC28\uB2E8";
+      const groupText = d.isGroupBlocked ? "\u{1F7E2} \uC774 \uADF8\uB8F9 \uC804\uCCB4 \uCC28\uB2E8 \uD574\uC81C" : "\u274C \uC774 \uAC1C\uB4DC\uB9BD\uCF58 \uADF8\uB8F9 \uC804\uCCB4 \uCC28\uB2E8";
+      const singleCls = d.isSingleBlocked ? "unblock-action" : "block-action";
+      const groupCls = d.isGroupBlocked ? "unblock-action" : "block-action";
+      const singlePart = d.isGroupBlocked ? "" : `<div class="dogcon-menu-item ${singleCls}" id="ext-dc-single">${singleText}</div>`;
+      dogconMenuEl.innerHTML = `${singlePart}<div class="dogcon-menu-item ${groupCls}" id="ext-dc-group">${groupText}</div>
       <div style="border-top:1px solid #e2e8f0;margin-top:4px;padding-top:4px;">
-        <a href="${L}" target="_blank" class="dogcon-menu-item" style="text-decoration:none;color:#475569;">\u{1F517} ${s.title} \uC815\uBCF4</a>
-      </div>`,q.style.left=`${d.pageX}px`,q.style.top=`${d.pageY}px`,q.style.display="block",q.querySelector("#ext-dc-single")?.addEventListener("click",Y),q.querySelector("#ext-dc-group")?.addEventListener("click",G)}function Y(){if(!a)return;let d=a.fileSrl,m=`${a.title}(${a.alt})`;r.get(["blockedDogcons"]).then(x=>{let s=x.blockedDogcons||[];a.isSingleBlocked?s=s.filter(L=>L.id!==d):s.some(L=>L.id===d)||s.push({id:d,name:m}),r.set({blockedDogcons:s}).then(()=>location.reload())})}function G(){if(!a)return;let d=a.srl,m=a.title;r.get(["blockedDogconGroups"]).then(x=>{let s=x.blockedDogconGroups||[];a.isGroupBlocked?s=s.filter(L=>L.id!==d):s.some(L=>L.id===d)||s.push({id:d,name:m}),r.set({blockedDogconGroups:s}).then(()=>location.reload())})}document.addEventListener("click",d=>{let m=document.getElementById("ext-dogcon-menu");m&&(m.style.display="none");let x=d.target.closest('a[class*="member_"]');if(x){let s=x.className.match(/member_(\d+)/);s&&(E.memberId=s[1],E.nickname=x.textContent.trim());let L=document.getElementById("popup_menu_area");L&&window.getComputedStyle(L).display!=="none"&&e(L)}});function ee(d,m,x,s){let L=document.getElementById("popup_menu_area");if(!L)return;let S=L.querySelector("ul");if(!S)return;S.querySelectorAll(".ext-ins-block, .ext-ins-memo").forEach(P=>P.remove());let H=s.includes(":")?s.split(":")[0]:s,V=document.createElement("li");V.className="ext-ins-memo";let X=H?` <span style="font-size:11px;color:#64748b;">(${H.length>8?H.slice(0,8)+"...":H})</span>`:"";V.innerHTML=`<a href="#" style="color:#0284c7;font-weight:bold;">\uBA54\uBAA8${X}</a>`,V.querySelector("a").addEventListener("click",P=>{P.preventDefault(),P.stopPropagation(),L.style.display="none",ae(m,d,s)});let B=document.createElement("li");B.className="ext-ins-block",x?(B.innerHTML=`<a href="#" style="color:#${le};font-weight:bold;">\uCC28\uB2E8 \uD574\uC81C</a>`,B.querySelector("a").addEventListener("click",P=>{P.preventDefault(),P.stopPropagation(),L.style.display="none",r.get(["blocked_users"]).then(De=>{let $e=(De.blocked_users||[]).filter(Ne=>String(Ne.member_num)!==d);r.set({blocked_users:$e}).then(()=>location.reload())})})):(B.innerHTML=`<a href="#" style="color:#${re};font-weight:bold;">\uCC28\uB2E8</a>`,B.querySelector("a").addEventListener("click",P=>{P.preventDefault(),P.stopPropagation(),L.style.display="none",z(m,d)})),S.appendChild(V),S.appendChild(B)}function e(d){let m=window.getComputedStyle(d);if(!(m.display==="none"||m.visibility==="hidden")){if(!E.memberId){let x=d.querySelector('a[class*="member_"]')||document.querySelector('a[class*="member_"]:focus');if(x){let s=x.className.match(/member_(\d+)/);s&&(E.memberId=s[1],E.nickname=x.textContent.trim())}if(!E.memberId)return}r.get(["blocked_users","userMemos"]).then(x=>{let s=x.blocked_users||[],L=x.userMemos||{},S=s.some(H=>String(H.member_num)===E.memberId);ee(E.memberId,E.nickname,S,L[E.memberId]||"")})}}let c=new MutationObserver(d=>{for(let m of d)m.type==="childList"?m.addedNodes.forEach(x=>{if(x.nodeType!==Node.ELEMENT_NODE)return;let s=x,L=s.querySelector?.("img.dogcon-clickable, img[data-dogcon-srl]"),S=s.querySelector?.('a[class*="member_"]');if((L||S||["IMG","DIV","LI","TR","A"].includes(s.tagName))&&setTimeout(()=>{F(document.body),(document.querySelectorAll("img.dogcon-clickable:not([data-ext-processed]), img[data-dogcon-srl]:not([data-ext-processed])").length||S)&&y(80)},50),s.id==="popup_menu_area")e(s);else{let H=s.querySelector?.("#popup_menu_area");H&&e(H)}}):m.type==="attributes"&&m.attributeName==="style"&&m.target.id==="popup_menu_area"&&e(m.target)}),p=new MutationObserver(d=>{for(let m of d)for(let x of m.addedNodes){if(x.nodeType!==1)continue;let s=x;if(s.matches?.("tr.ed, li.webzine, li.ed, div.ed.board-item")||s.querySelector?.("tr.ed, li.webzine, li.ed, div.ed.board-item")){y(80);return}}});function g(){c.observe(document.body,{childList:!0,subtree:!0,attributes:!0,attributeFilter:["style","class"]});let d=document.getElementById("popup_menu_area");d&&new MutationObserver(()=>e(d)).observe(d,{attributes:!0,attributeFilter:["style","class"]})}function b(){p.observe(document.body,{childList:!0,subtree:!0})}function l(){fetch(o+"?_="+Date.now()).then(d=>d.ok?d.text():null).then(d=>{if(!d)return;let m=d.trim();m&&(window._extLatestVersion=m,Ce(m,t)>0&&(D.classList.add("has-update"),I.textContent="v"+m,I.classList.add("show"),D.title=`\uAC1C\uB4DC\uB9BD Plus+ \uC124\uC815 (\uC5C5\uB370\uC774\uD2B8 \uC788\uC74C: v${m})`))}).catch(()=>{})}let u={storage:r,openBlockModal:z,openDogconMenu:be,injectDownloadAllButton:te,injectCopyLinkButton:M},h=null;function y(d=120){h&&clearTimeout(h),h=setTimeout(()=>qe(u),d)}function M(){document.querySelectorAll(".ed.article-head.margin-bottom-large .ed.margin-xxsmall.text-default").forEach(d=>{if(d.querySelector(".ext-copy-link-btn")||!d.querySelector("i.fas.fa-link"))return;let m=d.querySelector("a[href]");if(!m)return;let x=m.href,s=document.createElement("button");s.className="ext-copy-link-btn",s.textContent="\uB9C1\uD06C \uBCF5\uC0AC",s.addEventListener("click",L=>{L.preventDefault(),L.stopPropagation(),navigator.clipboard.writeText(x).then(()=>{s.textContent="\uBCF5\uC0AC\uB428 \u2713",setTimeout(()=>{s.textContent="\uB9C1\uD06C \uBCF5\uC0AC"},1500)}).catch(()=>{let S=document.createElement("textarea");S.value=x,S.style.position="fixed",S.style.opacity="0",document.body.appendChild(S),S.select(),document.execCommand("copy"),document.body.removeChild(S),s.textContent="\uBCF5\uC0AC\uB428 \u2713",setTimeout(()=>{s.textContent="\uB9C1\uD06C \uBCF5\uC0AC"},1500)})}),d.appendChild(s),O(d)})}function O(d){if(d.querySelector(".ext-reader-mode-btn"))return;let m=document.createElement("button");m.className="ext-reader-mode-btn ext-copy-link-btn";let x=()=>document.documentElement.classList.contains("ext-reader-mode"),s=()=>{m.textContent=x()?"\uC77D\uAE30 \uBAA8\uB4DC \uC885\uB8CC":"\uC77D\uAE30 \uBAA8\uB4DC"};s(),m.addEventListener("click",L=>{if(L.preventDefault(),L.stopPropagation(),document.documentElement.classList.toggle("ext-reader-mode"),s(),x()){let S=document.querySelector(".ed.article-head.margin-bottom-large");S&&S.scrollIntoView({behavior:"smooth",block:"start"})}}),d.appendChild(m)}function te(d){if(!d||d.querySelector(".ext-dl-all-btn"))return;let m=Array.from(d.querySelectorAll("li a[href*='procFileDownload']"));if(m.length<2)return;let x=300,s=document.createElement("li");s.style.cssText="border-bottom: 1px solid #e2e8f0; margin-bottom: 4px; padding-bottom: 4px;";let L=document.createElement("a");L.className="ext-dl-all-btn",L.href="#",L.innerHTML=`<i class="fas fa-download"></i> <span>\uC804\uCCB4 \uB2E4\uC6B4\uB85C\uB4DC (${m.length}\uAC1C)</span>`,L.addEventListener("click",S=>{S.preventDefault(),S.stopPropagation();let H=L.querySelector("span");H.textContent=`\uB2E4\uC6B4\uB85C\uB4DC \uC911... (${m.length}\uAC1C)`,L.style.color="#64748b",m.forEach((V,X)=>{setTimeout(()=>{let B=document.createElement("a");B.href=V.href,B.download="",B.style.display="none",document.body.appendChild(B),B.click(),document.body.removeChild(B)},X*x)}),setTimeout(()=>{H.textContent=`\uC804\uCCB4 \uB2E4\uC6B4\uB85C\uB4DC (${m.length}\uAC1C)`,L.style.color="#0284c7"},m.length*x+500)}),s.appendChild(L),d.insertBefore(s,d.firstChild)}function Ae(){if(document.getElementById("ext-loading-overlay"))return;let d=document.createElement("div");d.id="ext-loading-overlay",d.innerHTML='<div class="ext-spinner"></div><div class="ext-loading-text">\uD398\uC774\uC9C0 \uCD5C\uC801\uD654 \uC911...</div>',document.documentElement.appendChild(d)}Ae(),document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>y(300)):y(100),document.body?(g(),b()):document.addEventListener("DOMContentLoaded",()=>{g(),b()}),window.addEventListener("load",()=>{ne(),y(500),setTimeout(l,5e3),he()})})();})();
+        <a href="${infoUrl}" target="_blank" class="dogcon-menu-item" style="text-decoration:none;color:#475569;">\u{1F517} ${d.title} \uC815\uBCF4</a>
+      </div>`;
+      dogconMenuEl.style.left = `${e.pageX}px`;
+      dogconMenuEl.style.top = `${e.pageY}px`;
+      dogconMenuEl.style.display = "block";
+      dogconMenuEl.querySelector("#ext-dc-single")?.addEventListener("click", handleDogconSingle);
+      dogconMenuEl.querySelector("#ext-dc-group")?.addEventListener("click", handleDogconGroup);
+    }
+    function handleDogconSingle() {
+      if (!currentActiveDogconData) return;
+      const id = currentActiveDogconData.fileSrl;
+      const name = `${currentActiveDogconData.title}(${currentActiveDogconData.alt})`;
+      storage.get(["blockedDogcons"]).then((r) => {
+        let list = r.blockedDogcons || [];
+        if (currentActiveDogconData.isSingleBlocked)
+          list = list.filter((x) => x.id !== id);
+        else if (!list.some((x) => x.id === id)) list.push({ id, name });
+        storage.set({ blockedDogcons: list }).then(() => location.reload());
+      });
+    }
+    function handleDogconGroup() {
+      if (!currentActiveDogconData) return;
+      const id = currentActiveDogconData.srl;
+      const name = currentActiveDogconData.title;
+      storage.get(["blockedDogconGroups"]).then((r) => {
+        let list = r.blockedDogconGroups || [];
+        if (currentActiveDogconData.isGroupBlocked)
+          list = list.filter((x) => x.id !== id);
+        else if (!list.some((x) => x.id === id)) list.push({ id, name });
+        storage.set({ blockedDogconGroups: list }).then(() => location.reload());
+      });
+    }
+    document.addEventListener("click", (e) => {
+      const menu = document.getElementById("ext-dogcon-menu");
+      if (menu) menu.style.display = "none";
+      const uLink = e.target.closest(
+        'a[class*="member_"]'
+      );
+      if (uLink) {
+        const m = uLink.className.match(/member_(\d+)/);
+        if (m) {
+          lastClickedUserData.memberId = m[1];
+          lastClickedUserData.nickname = uLink.textContent.trim();
+        }
+        const area = document.getElementById("popup_menu_area");
+        if (area && window.getComputedStyle(area).display !== "none")
+          handlePopupMenu(area);
+      }
+    });
+    function insertMemberMenu(memberId, nickname, isBlocked, memoData) {
+      const area = document.getElementById("popup_menu_area");
+      if (!area) return;
+      const ul = area.querySelector("ul");
+      if (!ul) return;
+      ul.querySelectorAll(".ext-ins-block, .ext-ins-memo").forEach(
+        (x) => x.remove()
+      );
+      const pureMemo = memoData.includes(":") ? memoData.split(":")[0] : memoData;
+      const memoLi = document.createElement("li");
+      memoLi.className = "ext-ins-memo";
+      const suffix = pureMemo ? ` <span style="font-size:11px;color:#64748b;">(${pureMemo.length > 8 ? pureMemo.slice(0, 8) + "..." : pureMemo})</span>` : "";
+      memoLi.innerHTML = `<a href="#" style="color:#0284c7;font-weight:bold;">\uBA54\uBAA8${suffix}</a>`;
+      memoLi.querySelector("a").addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        area.style.display = "none";
+        openMemoModal(nickname, memberId, memoData);
+      });
+      const blockLi = document.createElement("li");
+      blockLi.className = "ext-ins-block";
+      if (isBlocked) {
+        blockLi.innerHTML = `<a href="#" style="color:#${GRANT_COLOR};font-weight:bold;">\uCC28\uB2E8 \uD574\uC81C</a>`;
+        blockLi.querySelector("a").addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          area.style.display = "none";
+          storage.get(["blocked_users"]).then((r) => {
+            const list = (r.blocked_users || []).filter(
+              (x) => String(x.member_num) !== memberId
+            );
+            storage.set({ blocked_users: list }).then(() => location.reload());
+          });
+        });
+      } else {
+        blockLi.innerHTML = `<a href="#" style="color:#${BLOCK_COLOR};font-weight:bold;">\uCC28\uB2E8</a>`;
+        blockLi.querySelector("a").addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          area.style.display = "none";
+          openBlockModal(nickname, memberId);
+        });
+      }
+      ul.appendChild(memoLi);
+      ul.appendChild(blockLi);
+    }
+    function handlePopupMenu(el) {
+      const cs = window.getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") return;
+      if (!lastClickedUserData.memberId) {
+        const lastLink = el.querySelector('a[class*="member_"]') || document.querySelector('a[class*="member_"]:focus');
+        if (lastLink) {
+          const m = lastLink.className.match(/member_(\d+)/);
+          if (m) {
+            lastClickedUserData.memberId = m[1];
+            lastClickedUserData.nickname = lastLink.textContent.trim();
+          }
+        }
+        if (!lastClickedUserData.memberId) return;
+      }
+      storage.get(["blocked_users", "userMemos"]).then((r) => {
+        const list = r.blocked_users || [];
+        const memos = r.userMemos || {};
+        const isBlocked = list.some(
+          (x) => String(x.member_num) === lastClickedUserData.memberId
+        );
+        insertMemberMenu(
+          lastClickedUserData.memberId,
+          lastClickedUserData.nickname,
+          isBlocked,
+          memos[lastClickedUserData.memberId] || ""
+        );
+      });
+    }
+    const popupObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === "childList") {
+          m.addedNodes.forEach((node) => {
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+            const el = node;
+            const hasDogcon = el.querySelector?.(
+              "img.dogcon-clickable, img[data-dogcon-srl]"
+            );
+            const hasMember = el.querySelector?.('a[class*="member_"]');
+            if (hasDogcon || hasMember || ["IMG", "DIV", "LI", "TR", "A"].includes(
+              el.tagName
+            )) {
+              setTimeout(() => {
+                attachBlindToggleEvents(document.body);
+                const unprocessed = document.querySelectorAll(
+                  "img.dogcon-clickable:not([data-ext-processed]), img[data-dogcon-srl]:not([data-ext-processed])"
+                );
+                if (unprocessed.length || hasMember) scheduleFilter(80);
+              }, 50);
+            }
+            if (el.id === "popup_menu_area") handlePopupMenu(el);
+            else {
+              const nested = el.querySelector?.("#popup_menu_area");
+              if (nested) handlePopupMenu(nested);
+            }
+          });
+        } else if (m.type === "attributes" && m.attributeName === "style") {
+          if (m.target.id === "popup_menu_area")
+            handlePopupMenu(m.target);
+        }
+      }
+    });
+    const _contentObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          const el = node;
+          const hasRows = el.matches?.("tr.ed, li.webzine, li.ed, div.ed.board-item") || el.querySelector?.("tr.ed, li.webzine, li.ed, div.ed.board-item");
+          if (hasRows) {
+            scheduleFilter(80);
+            return;
+          }
+        }
+      }
+    });
+    function startObserver() {
+      popupObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["style", "class"]
+      });
+      const existingPopup = document.getElementById("popup_menu_area");
+      if (existingPopup) {
+        new MutationObserver(() => handlePopupMenu(existingPopup)).observe(
+          existingPopup,
+          { attributes: true, attributeFilter: ["style", "class"] }
+        );
+      }
+    }
+    function startContentObserver() {
+      _contentObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    function checkVersion() {
+      fetch(VERSION_URL + "?_=" + Date.now()).then((r) => r.ok ? r.text() : null).then((text) => {
+        if (!text) return;
+        const latest = text.trim();
+        if (!latest) return;
+        window._extLatestVersion = latest;
+        if (compareVer(latest, CURRENT_VERSION) > 0) {
+          gearBtn.classList.add("has-update");
+          gearUpdateBadge.textContent = "v" + latest;
+          gearUpdateBadge.classList.add("show");
+          gearBtn.title = `\uAC1C\uB4DC\uB9BD Plus+ \uC124\uC815 (\uC5C5\uB370\uC774\uD2B8 \uC788\uC74C: v${latest})`;
+        }
+      }).catch(() => {
+      });
+    }
+    const filterDeps = {
+      storage,
+      openBlockModal,
+      openDogconMenu,
+      injectDownloadAllButton,
+      injectCopyLinkButton
+    };
+    let _filterTimer = null;
+    function scheduleFilter(delay = 120) {
+      if (_filterTimer) clearTimeout(_filterTimer);
+      _filterTimer = setTimeout(
+        () => executeFilterWithMinTime(filterDeps),
+        delay
+      );
+    }
+    function injectCopyLinkButton() {
+      document.querySelectorAll(
+        ".ed.article-head.margin-bottom-large .ed.margin-xxsmall.text-default"
+      ).forEach((container) => {
+        if (container.querySelector(".ext-copy-link-btn")) return;
+        if (!container.querySelector("i.fas.fa-link")) return;
+        const linkEl = container.querySelector("a[href]");
+        if (!linkEl) return;
+        const url = linkEl.href;
+        const btn = document.createElement("button");
+        btn.className = "ext-copy-link-btn";
+        btn.textContent = "\uB9C1\uD06C \uBCF5\uC0AC";
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          navigator.clipboard.writeText(url).then(() => {
+            btn.textContent = "\uBCF5\uC0AC\uB428 \u2713";
+            setTimeout(() => {
+              btn.textContent = "\uB9C1\uD06C \uBCF5\uC0AC";
+            }, 1500);
+          }).catch(() => {
+            const ta = document.createElement("textarea");
+            ta.value = url;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+            btn.textContent = "\uBCF5\uC0AC\uB428 \u2713";
+            setTimeout(() => {
+              btn.textContent = "\uB9C1\uD06C \uBCF5\uC0AC";
+            }, 1500);
+          });
+        });
+        container.appendChild(btn);
+        injectReaderModeButton(container);
+      });
+    }
+    function injectReaderModeButton(container) {
+      if (container.querySelector(".ext-reader-mode-btn")) return;
+      const btn = document.createElement("button");
+      btn.className = "ext-reader-mode-btn ext-copy-link-btn";
+      const isOn = () => document.documentElement.classList.contains("ext-reader-mode");
+      const update = () => {
+        btn.textContent = isOn() ? "\uC77D\uAE30 \uBAA8\uB4DC \uC885\uB8CC" : "\uC77D\uAE30 \uBAA8\uB4DC";
+      };
+      update();
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.documentElement.classList.toggle("ext-reader-mode");
+        update();
+        if (isOn()) {
+          const articleHead = document.querySelector(
+            ".ed.article-head.margin-bottom-large"
+          );
+          if (articleHead)
+            articleHead.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+      container.appendChild(btn);
+    }
+    function injectDownloadAllButton(menu) {
+      if (!menu || menu.querySelector(".ext-dl-all-btn")) return;
+      const links = Array.from(
+        menu.querySelectorAll(
+          "li a[href*='procFileDownload']"
+        )
+      );
+      if (links.length < 2) return;
+      const INTERVAL_MS = 300;
+      const btnLi = document.createElement("li");
+      btnLi.style.cssText = "border-bottom: 1px solid #e2e8f0; margin-bottom: 4px; padding-bottom: 4px;";
+      const btn = document.createElement("a");
+      btn.className = "ext-dl-all-btn";
+      btn.href = "#";
+      btn.innerHTML = `<i class="fas fa-download"></i> <span>\uC804\uCCB4 \uB2E4\uC6B4\uB85C\uB4DC (${links.length}\uAC1C)</span>`;
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const span = btn.querySelector("span");
+        span.textContent = `\uB2E4\uC6B4\uB85C\uB4DC \uC911... (${links.length}\uAC1C)`;
+        btn.style.color = "#64748b";
+        links.forEach((link, i) => {
+          setTimeout(() => {
+            const a = document.createElement("a");
+            a.href = link.href;
+            a.download = "";
+            a.style.display = "none";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }, i * INTERVAL_MS);
+        });
+        setTimeout(
+          () => {
+            span.textContent = `\uC804\uCCB4 \uB2E4\uC6B4\uB85C\uB4DC (${links.length}\uAC1C)`;
+            btn.style.color = "#0284c7";
+          },
+          links.length * INTERVAL_MS + 500
+        );
+      });
+      btnLi.appendChild(btn);
+      menu.insertBefore(btnLi, menu.firstChild);
+    }
+    function showLoadingOverlay() {
+      if (document.getElementById("ext-loading-overlay")) return;
+      const ov = document.createElement("div");
+      ov.id = "ext-loading-overlay";
+      ov.innerHTML = `<div class="ext-spinner"></div><div class="ext-loading-text">\uD398\uC774\uC9C0 \uCD5C\uC801\uD654 \uC911...</div>`;
+      document.documentElement.appendChild(ov);
+    }
+    showLoadingOverlay();
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => scheduleFilter(300));
+    } else {
+      scheduleFilter(100);
+    }
+    if (document.body) {
+      startObserver();
+      startContentObserver();
+    } else {
+      document.addEventListener("DOMContentLoaded", () => {
+        startObserver();
+        startContentObserver();
+      });
+    }
+    window.addEventListener("load", () => {
+      removeLoadingOverlay();
+      scheduleFilter(500);
+      setTimeout(checkVersion, 5e3);
+      bindContentImageGallery();
+    });
+  })();
+})();
