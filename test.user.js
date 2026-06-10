@@ -13,33 +13,55 @@
 (function () {
   "use strict";
 
-  // 1. 실행 확인
-  console.log("[진단] 스크립트 실행됨");
+  function injectDiag() {
+    const box = document.createElement("div");
+    box.style.cssText =
+      "position:fixed;bottom:80px;right:16px;z-index:999999;background:#1e293b;color:#e2e8f0;padding:12px 16px;border-radius:10px;font-size:12px;font-family:monospace;max-width:260px;line-height:1.8;";
 
-  // 2. GM API 확인
-  console.log("[진단] GM typeof:", typeof GM);
-  console.log("[진단] GM_getValue typeof:", typeof GM_getValue);
-  console.log(
-    "[진단] GM.getValue typeof:",
-    typeof GM !== "undefined" ? typeof GM.getValue : "GM없음",
-  );
+    const gmType = typeof GM;
+    const gmGetType = typeof GM !== "undefined" ? typeof GM.getValue : "N/A";
+    const gmSyncType = typeof GM_getValue;
 
-  // 3. 기어버튼 붙이기
-  function injectGear() {
-    if (document.getElementById("ext-test-gear")) return;
-    const btn = document.createElement("button");
-    btn.id = "ext-test-gear";
-    btn.textContent = "⚙️ 테스트";
-    btn.style.cssText =
-      "position:fixed;bottom:24px;right:16px;z-index:999999;padding:10px;background:#333;color:#fff;border:none;border-radius:50%;font-size:18px;cursor:pointer;";
-    document.body.appendChild(btn);
-    btn.addEventListener("click", () => alert("작동!"));
-    console.log("[진단] 기어버튼 삽입됨");
+    box.innerHTML = `
+      <div style="font-weight:bold;margin-bottom:6px;">⚙️ GM 진단</div>
+      <div>GM: <b>${gmType}</b></div>
+      <div>GM.getValue: <b>${gmGetType}</b></div>
+      <div>GM_getValue: <b>${gmSyncType}</b></div>
+    `;
+
+    // GM.getValue 테스트
+    if (typeof GM !== "undefined" && typeof GM.getValue === "function") {
+      GM.getValue("__test__", "ok")
+        .then((v) => {
+          const el = document.createElement("div");
+          el.innerHTML = `GM.getValue: <b style="color:#4ade80">✓ ${v}</b>`;
+          box.appendChild(el);
+        })
+        .catch((e) => {
+          const el = document.createElement("div");
+          el.innerHTML = `GM.getValue: <b style="color:#f87171">✗ ${e}</b>`;
+          box.appendChild(el);
+        });
+    } else if (typeof GM_getValue === "function") {
+      try {
+        const v = GM_getValue("__test__", "ok");
+        const el = document.createElement("div");
+        el.innerHTML = `GM_getValue: <b style="color:#4ade80">✓ ${v}</b>`;
+        box.appendChild(el);
+      } catch (e) {
+        const el = document.createElement("div");
+        el.innerHTML = `GM_getValue: <b style="color:#f87171">✗ ${e}</b>`;
+        box.appendChild(el);
+      }
+    } else {
+      const el = document.createElement("div");
+      el.innerHTML = `<b style="color:#f87171">GM API 없음 → localStorage</b>`;
+      box.appendChild(el);
+    }
+
+    document.body.appendChild(box);
   }
 
-  if (document.body) {
-    injectGear();
-  } else {
-    document.addEventListener("DOMContentLoaded", injectGear);
-  }
+  if (document.body) injectDiag();
+  else document.addEventListener("DOMContentLoaded", injectDiag);
 })();
