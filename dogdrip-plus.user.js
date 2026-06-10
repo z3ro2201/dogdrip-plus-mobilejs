@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.13
+// @version      1.1.14
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -2230,7 +2230,7 @@
   // src/mobile/main.ts
   (function() {
     "use strict";
-    const CURRENT_VERSION = "1.1.13";
+    const CURRENT_VERSION = "1.1.14";
     const VERSION_URL = "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
     const storage = new MobileStorage();
     injectMobileCSS();
@@ -2738,6 +2738,8 @@
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
+        lastClickedUserData.memberId = "";
+        lastClickedUserData.nickname = "";
         document.documentElement.classList.toggle("ext-reader-mode");
         update();
         if (isOn()) {
