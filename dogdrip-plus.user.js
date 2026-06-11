@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         개드립 Plus+ (Userscript)
 // @namespace    https://github.com/z3ro2201/dogdrip-plus-mobilejs
-// @version      1.1.14
+// @version      1.1.15
 // @description  개드립(dogdrip.net) 사용자차단 / 개드립콘차단 / 키워드차단 / 메모등록 / 설정 백업·복구 (모바일 지원)
 // @author       z3ro2201
 // @match        *://*.dogdrip.net/*
@@ -794,6 +794,7 @@
     html.ext-reader-mode #ext-memo-modal,
     html.ext-reader-mode #ext-dogcon-menu,
     html.ext-reader-mode #ext-gallery-overlay,
+    html.ext-reader-mode #ext-scroll-btn-wrap,
     html.ext-reader-mode #ext-loading-overlay { display: revert !important; }
 
     html.ext-reader-mode .container,
@@ -809,6 +810,44 @@
     html.ext-reader-mode .rhymix_content {
       font-size: 17px !important;
       line-height: 1.9 !important;
+    }
+
+    /* \uAC1C\uB4DC\uB9BD \uAE30\uBCF8 \uC2A4\uD06C\uB864 \uD234\uBC15\uC2A4 \uC228\uAE40 */
+    .eq.button-scroll-tool-box { display: none !important; }
+
+    /* \u2500\u2500 \uC0AC\uC774\uB4DC \uD035 \uBC84\uD2BC (\uAE30\uC5B4\uBC84\uD2BC \uBC14\uB85C \uC704, \uC6B0\uCE21 \uD558\uB2E8) \u2500\u2500 */
+    #ext-scroll-btn-wrap {
+      position: fixed;
+      bottom: 78px;
+      right: 16px;
+      z-index: 999997;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+    }
+    .ext-side-qk-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(30,30,40,0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #f1f5f9;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.32);
+      transition: background 0.15s, transform 0.1s;
+      padding: 0;
+      line-height: 1;
+    }
+    .ext-side-qk-btn:active {
+      background: rgba(59,130,246,0.9);
+      transform: scale(0.9);
     }
   `;
     const targetNode = document.head || document.documentElement;
@@ -881,6 +920,9 @@
         <div class="ext-switch-row"><label>\uCD94\uCC9C\uC218 \uBE44\uACF5\uAC1C</label><label class="ext-toggle"><input type="checkbox" id="s-disable-vote"><span class="ext-toggle-slider"></span></label></div>
         <div class="ext-switch-row"><label>\uC720\uD29C\uBE0C \uC54C\uACE0\uB9AC\uC998 \uBC29\uC9C0</label><label class="ext-toggle"><input type="checkbox" id="s-no-yt"><span class="ext-toggle-slider"></span></label></div>
         <div class="ext-switch-row"><label>\uB808\uBCA8 \uC544\uC774\uCF58 \uC228\uAE30\uAE30</label><label class="ext-toggle"><input type="checkbox" id="s-hide-level-icon"><span class="ext-toggle-slider"></span></label></div>
+        <p class="ext-section-label" style="margin-top:14px;">\uD14C\uB9C8 / \uAC1C\uB4DC\uB9BD\uCF58</p>
+        <div class="ext-switch-row"><label>\u{1F319} \uB2E4\uD06C\uBAA8\uB4DC</label><label class="ext-toggle"><input type="checkbox" id="s-dark-mode"><span class="ext-toggle-slider"></span></label></div>
+        <div class="ext-switch-row"><label>\u{1F636} \uAC1C\uB4DC\uB9BD\uCF58 \uC808\uC57D \uBAA8\uB4DC</label><label class="ext-toggle"><input type="checkbox" id="s-txt-mode"><span class="ext-toggle-slider"></span></label></div>
         <p class="ext-section-label" style="margin-top:14px;">\uCC28\uB2E8 \uBC29\uC2DD</p>
         <div class="ext-radio-group">
           <label class="ext-radio-item"><input type="radio" name="s-block-method" value="remove" id="s-bm-remove"> \uC81C\uAC70</label>
@@ -896,14 +938,14 @@
           <button class="ext-backup-btn" id="s-restore-btn">\u2B06\uFE0F \uBC31\uC5C5 \uBCF5\uAD6C</button>
         </div>
         <input type="file" id="s-restore-file" accept=".json" style="display:none;" />
-        <p class="ext-section-label" style="margin-top:18px;">Dogdrip++ \uBC31\uC5C5 \uC774\uAD00</p>
+        <p class="ext-section-label" style="margin-top:18px;">Dogdrip++ \uBC31\uC5C5 \uC774\uC2DD</p>
         <div class="ext-backup-row">
-          <button class="ext-backup-btn" id="s-restore-pp-btn" style="border-color:#f59e0b;color:#b45309;">\u{1F4E5} Dogdrip++ \uBC31\uC5C5\uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30</button>
+          <button class="ext-backup-btn" id="s-restore-pp-btn" style="border-color:#f59e0b;color:#b45309;">\u{1F4E5} Dogdrip++ \uBC31\uC5C5 \uAC00\uC838\uC624\uAE30</button>
         </div>
         <input type="file" id="s-restore-pp-file" accept=".json" style="display:none;" />
         <p style="margin-top:16px;font-size:12px;color:#94a3b8; line-height:1.7;">
           \uBC31\uC5C5 \uD30C\uC77C\uC740 JSON \uD615\uC2DD\uC73C\uB85C \uC800\uC7A5\uB418\uBA70, \uB3D9\uC77C \uC720\uC800\uC2A4\uD06C\uB9BD\uD2B8 \uD658\uACBD\uC5D0\uC11C \uBCF5\uAD6C \uAC00\uB2A5\uD569\uB2C8\uB2E4.<br>
-          Dogdrip++ \uB370\uC774\uD130 \uC774\uAD00 \uC2DC \uCC28\uB2E8 \uC720\uC800\xB7\uD0A4\uC6CC\uB4DC\uB9CC \uAC00\uC838\uC624\uBA70, \uB098\uBA38\uC9C0 \uD604\uC7AC \uC124\uC815\uC740 \uC720\uC9C0\uB429\uB2C8\uB2E4.<br>
+          Dogdrip++ \uC774\uC2DD \uC2DC \uCC28\uB2E8 \uC720\uC800\xB7\uD0A4\uC6CC\uB4DC\uB9CC \uAC00\uC838\uC624\uBA70, \uB098\uBA38\uC9C0 \uD604\uC7AC \uC124\uC815\uC740 \uC720\uC9C0\uB429\uB2C8\uB2E4.<br>
           \u203B \uC124\uC815 \uBCC0\uACBD \uD6C4 \uD398\uC774\uC9C0 \uC0C8\uB85C\uACE0\uCE68 \uC2DC \uBC18\uC601\uB429\uB2C8\uB2E4.
         </p>
       </div>
@@ -937,10 +979,7 @@
 
 \uC5C5\uB370\uC774\uD2B8 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9\uD560\uAE4C\uC694?`
         )) {
-          window.open(
-            "https://github.com/z3ro2201/dogdrip-plus-mobilejs/raw/main/dogdrip-plus.user.js",
-            "_blank"
-          );
+          window.open("https://github.com/z3ro2201/dogdrip-plus-mobilejs/raw/main/dogdrip-plus.user.js", "_blank");
           return;
         }
       }
@@ -1032,6 +1071,25 @@
         });
       });
     });
+    settingsPanel.querySelector("#s-dark-mode")?.addEventListener("change", (e) => {
+      const isDark = e.target.checked;
+      setCookie("theme", isDark ? "b" : "a");
+      setCookie("rx_color_scheme", isDark ? "dark" : "light");
+      location.reload();
+    });
+    settingsPanel.querySelector("#s-txt-mode")?.addEventListener("change", (e) => {
+      const on = e.target.checked;
+      setCookie("txtmode", on ? "1" : "0");
+      location.reload();
+    });
+  }
+  function setCookie(name, value) {
+    const maxAge = 365 * 24 * 60 * 60;
+    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; domain=.dogdrip.net; secure; samesite=none`;
+  }
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+    return m ? decodeURIComponent(m[1]) : null;
   }
   function loadPanelData(tabId, storage) {
     switch (tabId) {
@@ -1244,6 +1302,14 @@
       const method = r.blockMethod || "remove";
       const rm = document.getElementById(`s-bm-${method}`);
       if (rm) rm.checked = true;
+      const darkEl = document.getElementById("s-dark-mode");
+      if (darkEl) {
+        const scheme = getCookie("rx_color_scheme");
+        const theme = getCookie("theme");
+        darkEl.checked = scheme === "dark" || theme === "b";
+      }
+      const txtEl = document.getElementById("s-txt-mode");
+      if (txtEl) txtEl.checked = getCookie("txtmode") === "1";
     });
   }
   function doBackup(storage) {
@@ -1380,7 +1446,7 @@
             userMemos: cur.userMemos || {}
           }).then(() => {
             alert(
-              `\u{1F389} Dogdrip++ \uB370\uC774\uD130 \uC774\uAD00 \uC644\uB8CC!
+              `\u{1F389} Dogdrip++ \uC774\uC2DD \uC644\uB8CC!
 \uCC28\uB2E8 \uC720\uC800 ${blocked_users.length}\uBA85, \uD0A4\uC6CC\uB4DC ${keywords.length}\uAC1C\uB97C \uAC00\uC838\uC654\uC2B5\uB2C8\uB2E4.
 \uD398\uC774\uC9C0\uB97C \uC0C8\uB85C\uACE0\uCE68\uD569\uB2C8\uB2E4.`
             );
@@ -1562,8 +1628,13 @@
         if (!entry) return { text: "", color: "blue" };
         return { text: entry.memo || "", color: entry.color || "blue" };
       }
-      document.querySelectorAll("li.webzine").forEach((article) => {
+      document.querySelectorAll(
+        "li.webzine, li.ed.flex.flex-left.flex-middle"
+      ).forEach((article) => {
+        if (article.dataset.extListProcessed) return;
         const titleElement = article.querySelector(".title-link");
+        if (!titleElement) return;
+        article.dataset.extListProcessed = "true";
         const nicknameElement = article.querySelector(
           'a[class*="member_"]'
         );
@@ -2029,6 +2100,78 @@
           });
         }
       });
+      const isDogconShop = location.pathname.replace(/\//g, "") === "dogcon" || new URLSearchParams(location.search).get("mid") === "dogcon";
+      if (isDogconShop) {
+        const dogconSrl = new URLSearchParams(location.search).get(
+          "dogcon_srl"
+        );
+        const pageType = dogconSrl ? "item" : "list";
+        if (pageType === "item") {
+          const isGroupBlocked = blockedDogconGroupIds.includes(dogconSrl);
+          const dogconBuyArea = document.querySelector("div.dogcon_buy");
+          if (dogconBuyArea && !document.getElementById("ext-dogcon-action-group")) {
+            const groupBtn = document.createElement("span");
+            groupBtn.id = "ext-dogcon-action-group";
+            groupBtn.dataset.srl = String(dogconSrl);
+            groupBtn.dataset.isGroupBlocked = String(isGroupBlocked);
+            groupBtn.style.cssText = "display:inline-block;cursor:pointer;padding:8px 16px;margin-top:8px;border-radius:8px;font-weight:bold;font-size:13px;text-align:center;";
+            if (isGroupBlocked) {
+              groupBtn.textContent = "\u2705 \uAC1C\uB4DC\uB9BD\uCF58 \uADF8\uB8F9 \uCC28\uB2E8 \uD574\uC81C";
+              groupBtn.style.background = "#dcfce7";
+              groupBtn.style.color = "#166534";
+              groupBtn.style.border = "1px solid #86efac";
+              const fileListEl = document.querySelector(".dogcon_file_list");
+              if (fileListEl)
+                fileListEl.innerHTML = '<div style="padding:24px;text-align:center;color:#64748b;font-weight:bold;">\u{1F6AB} \uCC28\uB2E8\uB41C \uAC1C\uB4DC\uB9BD\uCF58\uC785\uB2C8\uB2E4.</div>';
+            } else {
+              groupBtn.textContent = "\u274C \uC774 \uAC1C\uB4DC\uB9BD\uCF58 \uADF8\uB8F9 \uC804\uCCB4 \uCC28\uB2E8";
+              groupBtn.style.background = "#fee2e2";
+              groupBtn.style.color = "#b91c1c";
+              groupBtn.style.border = "1px solid #fca5a5";
+            }
+            groupBtn.addEventListener("click", () => {
+              const groupTitle = document.querySelector(
+                ".dogcon_view .ng, .dogcon_title, h1, h2"
+              )?.textContent?.trim() || "\uAC1C\uB4DC\uB9BD\uCF58";
+              storage.get(["blockedDogconGroups"]).then((res) => {
+                let list = res.blockedDogconGroups || [];
+                if (isGroupBlocked) {
+                  list = list.filter((x) => x.id !== dogconSrl);
+                } else if (!list.some((x) => x.id === dogconSrl)) {
+                  list.push({ id: dogconSrl, name: groupTitle });
+                }
+                storage.set({ blockedDogconGroups: list }).then(() => {
+                  window.location.reload();
+                });
+              });
+            });
+            dogconBuyArea.appendChild(groupBtn);
+          }
+        } else {
+          document.querySelectorAll("li.lst_stk").forEach((item) => {
+            if (item.dataset.extDogconProcessed) return;
+            const link = item.querySelector(
+              'a[href*="dogcon_srl="]'
+            );
+            if (!link) return;
+            const href = link.getAttribute("href") || "";
+            const m = href.match(/dogcon_srl=(\d+)/);
+            if (!m) return;
+            const srl = m[1];
+            item.dataset.extDogconProcessed = "true";
+            if (blockedDogconGroupIds.includes(srl)) {
+              const thumbWrap = item.querySelector(".tmb_wrp") || item;
+              const titleEl = item.querySelector(".ng");
+              const titleText = titleEl ? titleEl.textContent.trim() : "\uAC1C\uB4DC\uB9BD\uCF58";
+              const overlay = document.createElement("div");
+              overlay.className = "ext-dogcon-shop-blocked";
+              overlay.innerHTML = `\u{1F6AB}<br>\uCC28\uB2E8\uB41C \uAC1C\uB4DC\uB9BD\uCF58\uC785\uB2C8\uB2E4<br><span style="font-size:11px;color:#94a3b8;">(${titleText})</span>`;
+              overlay.style.cssText = "display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;width:160px;height:160px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:13px;font-weight:bold;line-height:1.6;box-sizing:border-box;";
+              thumbWrap.replaceWith(overlay);
+            }
+          });
+        }
+      }
       if (result.disableVote === true) {
         document.querySelectorAll("td.ed.voteNum.text-primary").forEach((td) => {
           if (!td.dataset.extVoteProcessed) {
@@ -2230,7 +2373,7 @@
   // src/mobile/main.ts
   (function() {
     "use strict";
-    const CURRENT_VERSION = "1.1.14";
+    const CURRENT_VERSION = "1.1.15";
     const VERSION_URL = "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
     const storage = new MobileStorage();
     injectMobileCSS();
@@ -2281,6 +2424,63 @@
     gearBtn.textContent = "\u2699\uFE0F";
     gearWrap.appendChild(gearUpdateBadge);
     gearWrap.appendChild(gearBtn);
+    const isPostPage = /\/\d+($|[?#])/.test(location.pathname + location.search) || !!document.querySelector(".ed.article-head.margin-bottom-large");
+    const scrollBtnWrap = document.createElement("div");
+    scrollBtnWrap.id = "ext-scroll-btn-wrap";
+    function makeQkBtn(id, label, title, onClick) {
+      const b = document.createElement("button");
+      b.id = id;
+      b.className = "ext-side-qk-btn";
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      });
+      return b;
+    }
+    const scrollTopBtn = makeQkBtn(
+      "ext-scroll-top-btn",
+      "\u25B2",
+      "\uB9E8 \uC704\uB85C",
+      () => window.scrollTo({ top: 0, behavior: "smooth" })
+    );
+    scrollTopBtn.style.display = "none";
+    const scrollBottomBtn = makeQkBtn(
+      "ext-scroll-bottom-btn",
+      "\u25BC",
+      "\uB9E8 \uC544\uB798\uB85C",
+      () => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })
+    );
+    scrollBtnWrap.appendChild(scrollTopBtn);
+    scrollBtnWrap.appendChild(scrollBottomBtn);
+    if (isPostPage) {
+      const commentBtn = makeQkBtn("ext-qk-comment", "\u{1F4AC}", "\uB313\uAE00", () => {
+        const t = document.getElementById("comment_top") || document.querySelector(".ed.comment, #comment_list");
+        if (t) t.scrollIntoView({ behavior: "smooth" });
+      });
+      const contentBtn = makeQkBtn("ext-qk-content", "\u{1F4C4}", "\uBCF8\uBB38", () => {
+        const t = document.querySelector(
+          '[class*="rhymix_content"][class*="xe_content"], .ed.article-head.margin-bottom-large'
+        );
+        if (t) t.scrollIntoView({ behavior: "smooth" });
+      });
+      const listBtn = makeQkBtn("ext-qk-list", "\u{1F4CB}", "\uBAA9\uB85D", () => {
+        const listLink = document.querySelector(
+          ".ed.article-toolbar a[href]"
+        );
+        if (listLink) {
+          location.href = listLink.href;
+          return;
+        }
+        const m = location.pathname.match(/^\/([a-z]+)/);
+        if (m) location.href = "/" + m[1];
+      });
+      scrollBtnWrap.appendChild(commentBtn);
+      scrollBtnWrap.appendChild(contentBtn);
+      scrollBtnWrap.appendChild(listBtn);
+    }
     const settingsPanel = document.createElement("div");
     settingsPanel.id = "ext-settings-panel";
     settingsPanel.innerHTML = buildSettingsPanelHTML();
@@ -2291,6 +2491,7 @@
       document.documentElement.appendChild(memoModalEl);
       document.documentElement.appendChild(dogconMenuEl);
       document.documentElement.appendChild(gearWrap);
+      document.documentElement.appendChild(scrollBtnWrap);
       document.documentElement.appendChild(settingsPanel);
       bindBlockModal();
       bindMemoModal();
@@ -2817,11 +3018,112 @@
         startContentObserver();
       });
     }
+    function initScrollBehavior() {
+      let scrollTimer = null;
+      const SCROLL_THRESHOLD = 200;
+      const BOTTOM_THRESHOLD = 100;
+      function updateScrollButtons() {
+        const scrollY = window.scrollY;
+        const maxScroll = document.body.scrollHeight - window.innerHeight;
+        scrollTopBtn.style.display = scrollY > SCROLL_THRESHOLD ? "" : "none";
+        scrollBottomBtn.style.display = maxScroll - scrollY < BOTTOM_THRESHOLD ? "none" : "";
+      }
+      window.addEventListener(
+        "scroll",
+        () => {
+          gearWrap.style.opacity = "0";
+          gearWrap.style.pointerEvents = "none";
+          updateScrollButtons();
+          if (scrollTimer) clearTimeout(scrollTimer);
+          scrollTimer = setTimeout(() => {
+            gearWrap.style.opacity = "1";
+            gearWrap.style.pointerEvents = "";
+          }, 800);
+        },
+        { passive: true }
+      );
+      updateScrollButtons();
+    }
+    function initGearDrag(st) {
+      st.get(["gearPosition"]).then((r) => {
+        const pos = r.gearPosition;
+        if (pos) {
+          gearWrap.style.bottom = pos.bottom + "px";
+          gearWrap.style.right = pos.right + "px";
+        }
+      });
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartY = 0;
+      let startBottom = 0;
+      let startRight = 0;
+      let dragMoved = false;
+      gearWrap.addEventListener(
+        "touchstart",
+        (e) => {
+          if (e.touches.length !== 1) return;
+          const touch = e.touches[0];
+          isDragging = true;
+          dragMoved = false;
+          dragStartX = touch.clientX;
+          dragStartY = touch.clientY;
+          startBottom = parseInt(gearWrap.style.bottom || "24", 10);
+          startRight = parseInt(gearWrap.style.right || "16", 10);
+          gearWrap.style.transition = "none";
+        },
+        { passive: true }
+      );
+      gearWrap.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!isDragging || e.touches.length !== 1) return;
+          const touch = e.touches[0];
+          const dx = touch.clientX - dragStartX;
+          const dy = touch.clientY - dragStartY;
+          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragMoved = true;
+          if (!dragMoved) return;
+          e.preventDefault();
+          const newBottom = Math.max(
+            8,
+            Math.min(window.innerHeight - 60, startBottom - dy)
+          );
+          const newRight = Math.max(
+            8,
+            Math.min(window.innerWidth - 60, startRight - dx)
+          );
+          gearWrap.style.bottom = newBottom + "px";
+          gearWrap.style.right = newRight + "px";
+        },
+        { passive: false }
+      );
+      gearWrap.addEventListener("touchend", () => {
+        if (!isDragging) return;
+        isDragging = false;
+        gearWrap.style.transition = "";
+        if (dragMoved) {
+          const bottom = parseInt(gearWrap.style.bottom, 10);
+          const right = parseInt(gearWrap.style.right, 10);
+          st.set({ gearPosition: { bottom, right } });
+        }
+      });
+      gearBtn.addEventListener(
+        "click",
+        (e) => {
+          if (dragMoved) {
+            e.stopImmediatePropagation();
+            dragMoved = false;
+          }
+        },
+        true
+      );
+    }
     window.addEventListener("load", () => {
       removeLoadingOverlay();
       scheduleFilter(500);
       setTimeout(checkVersion, 5e3);
       bindContentImageGallery();
+      initScrollBehavior();
+      initGearDrag(storage);
     });
   })();
 
