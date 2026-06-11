@@ -10,6 +10,7 @@
 // @grant        GM.deleteValue
 // @run-at       document-start
 // @connect      raw.githubusercontent.com
+// @connect      workers.dev
 // @updateURL    https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // @downloadURL  https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/dogdrip-plus.user.js
 // ==/UserScript==
@@ -327,18 +328,22 @@
       #ext-gallery-img-wrap {
         flex: 1;
         display: flex;
-        align-items: center;
-        justify-content: center;
+        align-items: safe center;
+        justify-content: safe center;
         padding: 16px 0;
-        overflow: hidden;
+        overflow: auto;
+        cursor: grab;
+      }
+      #ext-gallery-img-wrap:active {
+        cursor: grabbing;
       }
       #ext-gallery-main-img {
         max-width: 100%;
-        max-height: calc(90vh - 160px);
         object-fit: contain;
         border-radius: 4px;
         display: block;
         user-select: none;
+        margin: auto;
       }
       #ext-gallery-strip-wrap {
         flex-shrink: 0;
@@ -418,6 +423,47 @@
     _overlayEl.addEventListener("click", (e) => {
       if (e.target === _overlayEl) closeGallery();
     });
+    const imgWrap = _overlayEl.querySelector(
+      "#ext-gallery-img-wrap"
+    );
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panScrollLeft = 0;
+    let panScrollTop = 0;
+    let panMoved = false;
+    imgWrap.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      isPanning = true;
+      panMoved = false;
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panScrollLeft = imgWrap.scrollLeft;
+      panScrollTop = imgWrap.scrollTop;
+      imgWrap.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!isPanning) return;
+      const dx = e.clientX - panStartX;
+      const dy = e.clientY - panStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) panMoved = true;
+      imgWrap.scrollLeft = panScrollLeft - dx;
+      imgWrap.scrollTop = panScrollTop - dy;
+    });
+    window.addEventListener("mouseup", () => {
+      if (!isPanning) return;
+      isPanning = false;
+      imgWrap.style.cursor = "";
+    });
+    imgWrap.addEventListener(
+      "wheel",
+      (e) => {
+        const canScroll = imgWrap.scrollHeight > imgWrap.clientHeight;
+        if (canScroll) e.stopPropagation();
+      },
+      { passive: true }
+    );
     document.addEventListener("keydown", (e) => {
       if (!_overlayEl || _overlayEl.style.display === "none") return;
       switch (e.key) {
@@ -864,7 +910,7 @@
       </div>
       <div class="ext-tab-bar">
         <button class="ext-tab active" data-tab="tab-block-user">\u{1F464} \uC0AC\uC6A9\uC790\uCC28\uB2E8</button>
-        <button class="ext-tab" data-tab="tab-keyword">\u{1F511} \uD0A4\uC6CC\uB4DC\uCC28\uB2E8</button>
+        <button class="ext-tab" data-tab="tab-keyword">\u2328\uFE0F \uD0A4\uC6CC\uB4DC\uCC28\uB2E8</button>
         <button class="ext-tab" data-tab="tab-dogcon">\u{1F436} \uAC1C\uB4DC\uB9BD\uCF58</button>
         <button class="ext-tab" data-tab="tab-memo">\u{1F4DD} \uBA54\uBAA8</button>
         <button class="ext-tab" data-tab="tab-display">\u{1F5A5} \uD45C\uC2DC</button>
@@ -1085,7 +1131,11 @@
   }
   function setCookie(name, value) {
     const maxAge = 365 * 24 * 60 * 60;
-    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; domain=.dogdrip.net; secure; samesite=none`;
+    const host = location.hostname;
+    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}`;
+    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; domain=${host}`;
+    const baseDomain = host.split(".").slice(-2).join(".");
+    document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; domain=.${baseDomain}`;
   }
   function getCookie(name) {
     const m = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
@@ -1474,19 +1524,32 @@
   function attachBlindToggleEvents(container) {
     container.querySelectorAll(".ext-blind-wrapper:not([data-bound])").forEach((wrapper) => {
       wrapper.dataset.bound = "true";
-      const btn = wrapper.querySelector(".ext-blind-toggle-btn");
+      const btn = wrapper.querySelector(
+        ".ext-blind-toggle-btn"
+      );
       const content = wrapper.querySelector(".ext-blind-content");
       if (!btn || !content) return;
+      content.style.position = "relative";
+      if (!content.querySelector(".ext-blind-click-guard")) {
+        const guard = document.createElement("div");
+        guard.className = "ext-blind-click-guard";
+        guard.style.cssText = "position:absolute;inset:0;z-index:5;background:transparent;cursor:default;";
+        guard.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+        content.appendChild(guard);
+      }
       btn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         const isVisible = content.style.display !== "none";
-        content.style.display = isVisible ? "none" : "block";
+        content.style.display = isVisible ? "none" : "flex";
         btn.textContent = isVisible ? "\uB0B4\uC6A9 \uBCF4\uAE30" : "\uB0B4\uC6A9 \uC228\uAE30\uAE30";
       });
       wrapper.addEventListener("mouseenter", () => {
         if (content.style.display !== "none") return;
-        content.style.display = "block";
+        content.style.display = "flex";
         btn.textContent = "\uB0B4\uC6A9 \uC228\uAE30\uAE30";
       });
       wrapper.addEventListener("mouseleave", () => {
@@ -1628,6 +1691,33 @@
         if (!entry) return { text: "", color: "blue" };
         return { text: entry.memo || "", color: entry.color || "blue" };
       }
+      function applyKeywordBlock(targetEl, typeLabel) {
+        if (isBadgeMode) {
+          if (!targetEl.querySelector(".ext-keyword-block-badge")) {
+            const badge = document.createElement("span");
+            badge.className = "ext-user-memo-badge ext-memo-red-solid ext-keyword-block-badge";
+            badge.textContent = "\u{1F512} \uD0A4\uC6CC\uB4DC \uCC28\uB2E8";
+            targetEl.classList.add("ext-blocked-user-layout");
+            const firstChild = targetEl.querySelector(".title-link, .title, a");
+            if (firstChild) firstChild.before(badge);
+            else targetEl.prepend(badge);
+          }
+          return true;
+        }
+        if (targetEl.dataset.extFiltered) return true;
+        targetEl.dataset.extFiltered = "true";
+        if (isBlindMode) {
+          const cacheHTML = targetEl.innerHTML;
+          targetEl.innerHTML = buildBlindWrapperHTML(
+            `\uD0A4\uC6CC\uB4DC\uAC00 \uD3EC\uD568\uB41C ${typeLabel}`,
+            cacheHTML
+          );
+          attachBlindToggleEvents(targetEl);
+        } else {
+          targetEl.remove();
+        }
+        return true;
+      }
       document.querySelectorAll(
         "li.webzine, li.ed.flex.flex-left.flex-middle"
       ).forEach((article) => {
@@ -1658,7 +1748,7 @@
           }
         }
         if (shouldRemove) {
-          article.remove();
+          applyKeywordBlock(article, "\uAC8C\uC2DC\uAE00");
           return;
         }
         if (shouldBlind) {
@@ -1725,7 +1815,7 @@
           if (filterKeywords.some(
             (kw) => checkKeywordMatchCondition(titleText, kw, "posts")
           )) {
-            parentLi.remove();
+            applyKeywordBlock(parentLi, "\uAC8C\uC2DC\uAE00");
             return;
           }
         }
@@ -1817,7 +1907,27 @@
           }
         }
         if (shouldRemove) {
-          row.remove();
+          if (isBadgeMode) {
+            const titleTd = row.querySelector("td.title") || row;
+            if (!titleTd.querySelector(".ext-keyword-block-badge")) {
+              const badge = document.createElement("span");
+              badge.className = "ext-user-memo-badge ext-memo-red-solid ext-keyword-block-badge";
+              badge.textContent = "\u{1F512} \uD0A4\uC6CC\uB4DC \uCC28\uB2E8";
+              const anchor = titleTd.querySelector(".title-link, a");
+              if (anchor) anchor.before(badge);
+              else titleTd.prepend(badge);
+              row.classList.add("ext-blocked-user-layout");
+            }
+          } else if (isBlindMode) {
+            if (row.dataset.extFiltered) return;
+            row.dataset.extFiltered = "true";
+            const colCount = row.querySelectorAll("td, th").length || 6;
+            const cacheHTML = row.innerHTML;
+            row.innerHTML = `<td colspan="${colCount}" style="padding: 0;">${buildBlindWrapperHTML("\uD0A4\uC6CC\uB4DC\uAC00 \uD3EC\uD568\uB41C \uAC8C\uC2DC\uAE00", `<table style="width:100%"><tbody><tr>${cacheHTML}</tr></tbody></table>`)}</td>`;
+            attachBlindToggleEvents(row);
+          } else {
+            row.remove();
+          }
           return;
         }
         if (shouldBlind) {
@@ -1887,6 +1997,17 @@
         }
         if (shouldKeywordRemove) {
           const totalCommentTarget = comment.closest("li, div.comment-item") || comment;
+          if (isBadgeMode) {
+            if (!comment.querySelector(".ext-keyword-block-badge")) {
+              const badge = document.createElement("span");
+              badge.className = "ext-user-memo-badge ext-memo-red-solid ext-keyword-block-badge";
+              badge.textContent = "\u{1F512} \uD0A4\uC6CC\uB4DC \uCC28\uB2E8";
+              if (nicknameElement) nicknameElement.after(badge);
+              else comment.prepend(badge);
+              totalCommentTarget.classList.add("ext-blocked-user-layout");
+            }
+            return;
+          }
           if (totalCommentTarget.dataset.extFiltered) return;
           totalCommentTarget.dataset.extFiltered = "true";
           if (isBlindMode) {
@@ -2049,9 +2170,6 @@
           }
         }
       }
-      document.querySelectorAll(".ed.dropdown .ed.dropdown-menu").forEach((menu) => {
-        injectDownloadAllButton(menu);
-      });
       const dogconImgs = document.querySelectorAll(
         "img.dogcon-clickable, img[data-dogcon-srl]"
       );
@@ -2173,16 +2291,21 @@
         }
       }
       if (result.disableVote === true) {
+        document.querySelectorAll("th").forEach((th) => {
+          if (th.textContent.trim() === "\uCD94\uCC9C \uC218") th.classList.add("hidden");
+        });
         document.querySelectorAll("td.ed.voteNum.text-primary").forEach((td) => {
           if (!td.dataset.extVoteProcessed) {
             td.dataset.extVoteProcessed = "true";
             td.innerHTML = '<i class="fas fa-baby"></i>';
+            td.classList.add("hidden");
           }
         });
         document.querySelectorAll("i.far.fa-thumbs-up").forEach((icon) => {
           if (!icon.dataset.extVoteProcessed) {
             icon.dataset.extVoteProcessed = "true";
             icon.className = "fas fa-baby";
+            icon.classList.add("hidden");
             const parent = icon.closest("span.text-primary");
             if (parent?.nextElementSibling?.classList.contains("text-primary"))
               parent.nextElementSibling.remove();
@@ -2192,6 +2315,7 @@
           if (btn.dataset.extVoteProcessed) return;
           btn.dataset.extVoteProcessed = "true";
           if (btn.getAttribute("title") === "\uCD94\uCC9C") {
+            btn.classList.add("hidden");
             const icon = btn.querySelector("i");
             if (icon) icon.className = "fas fa-baby";
             const count = btn.querySelector("span.count");
@@ -2374,7 +2498,7 @@
   (function() {
     "use strict";
     const CURRENT_VERSION = "1.1.15";
-    const VERSION_URL = "https://raw.githubusercontent.com/z3ro2201/dogdrip-plus-mobilejs/main/version.txt";
+    const VERSION_URL = "https://dogdrip-stats.dogdrip-plus.workers.dev/";
     const storage = new MobileStorage();
     injectMobileCSS();
     let targetNicknameToBlock = "";
